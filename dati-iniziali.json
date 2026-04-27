@@ -1,0 +1,488 @@
+{
+  "exportedAt": "2026-04-23T00:00:00Z",
+  "version": 2,
+  "series": [
+    {
+      "id": "s_bleach",
+      "name": "Bleach",
+      "author": "Tite Kubo",
+      "cover": null,
+      "createdAt": 1776956178607,
+      "volumes": [
+        {
+          "n": 1,
+          "owned": true
+        },
+        {
+          "n": 2,
+          "owned": true
+        },
+        {
+          "n": 3,
+          "owned": true
+        },
+        {
+          "n": 4,
+          "owned": true
+        },
+        {
+          "n": 5,
+          "owned": true
+        },
+        {
+          "n": 6,
+          "owned": true
+        },
+        {
+          "n": 7,
+          "owned": true
+        },
+        {
+          "n": 8,
+          "owned": true
+        },
+        {
+          "n": 9,
+          "owned": true
+        },
+        {
+          "n": 10,
+          "owned": true
+        },
+        {
+          "n": 11,
+          "owned": true
+        },
+        {
+          "n": 12,
+          "owned": true
+        },
+        {
+          "n": 13,
+          "owned": true
+        },
+        {
+          "n": 14,
+          "owned": true
+        },
+        {
+          "n": 15,
+          "owned": true
+        },
+        {
+          "n": 16,
+          "owned": true
+        },
+        {
+          "n": 17,
+          "owned": true
+        },
+        {
+          "n": 18,
+          "owned": true
+        },
+        {
+          "n": 19,
+          "owned": true
+        },
+        {
+          "n": 20,
+          "owned": true
+        },
+        {
+          "n": 21,
+          "owned": true
+        },
+        {
+          "n": 22,
+          "owned": true
+        },
+        {
+          "n": 23,
+          "owned": true
+        },
+        {
+          "n": 24,
+          "owned": true
+        },
+        {
+          "n": 25,
+          "owned": true
+        },
+        {
+          "n": 26,
+          "owned": true
+        },
+        {
+          "n": 27,
+          "owned": true
+        },
+        {
+          "n": 28,
+          "owned": true
+        },
+        {
+          "n": 29,
+          "owned": true
+        },
+        {
+          "n": 30,
+          "owned": true
+        },
+        {
+          "n": 31,
+          "owned": true
+        },
+        {
+          "n": 32,
+          "owned": true
+        },
+        {
+          "n": 33,
+          "owned": true
+        },
+        {
+          "n": 34,
+          "owned": true
+        },
+        {
+          "n": 35,
+          "owned": true
+        },
+        {
+          "n": 36,
+          "owned": true
+        },
+        {
+          "n": 37,
+          "owned": true
+        },
+        {
+          "n": 38,
+          "owned": true
+        },
+        {
+          "n": 39,
+          "owned": false
+        },
+        {
+          "n": 40,
+          "owned": false
+        },
+        {
+          "n": 41,
+          "owned": false
+        },
+        {
+          "n": 42,
+          "owned": false
+        },
+        {
+          "n": 43,
+          "owned": false
+        },
+        {
+          "n": 44,
+          "owned": false
+        },
+        {
+          "n": 45,
+          "owned": false
+        },
+        {
+          "n": 46,
+          "owned": false
+        },
+        {
+          "n": 47,
+          "owned": false
+        },
+        {
+          "n": 48,
+          "owned": false
+        },
+        {
+          "n": 49,
+          "owned": false
+        },
+        {
+          "n": 50,
+          "owned": false
+        },
+        {
+          "n": 51,
+          "owned": false
+        },
+        {
+          "n": 52,
+          "owned": false
+        },
+        {
+          "n": 53,
+          "owned": false
+        },
+        {
+          "n": 54,
+          "owned": false
+        },
+        {
+          "n": 55,
+          "owned": false
+        },
+        {
+          "n": 56,
+          "owned": false
+        },
+        {
+          "n": 57,
+          "owned": false
+        },
+        {
+          "n": 58,
+          "owned": false
+        },
+        {
+          "n": 59,
+          "owned": false
+        },
+        {
+          "n": 60,
+          "owned": false
+        },
+        {
+          "n": 61,
+          "owned": false
+        },
+        {
+          "n": 62,
+          "owned": false
+        },
+        {
+          "n": 63,
+          "owned": false
+        },
+        {
+          "n": 64,
+          "owned": false
+        },
+        {
+          "n": 65,
+          "owned": false
+        },
+        {
+          "n": 66,
+          "owned": false
+        },
+        {
+          "n": 67,
+          "owned": false
+        },
+        {
+          "n": 68,
+          "owned": false
+        },
+        {
+          "n": 69,
+          "owned": false
+        },
+        {
+          "n": 70,
+          "owned": false
+        },
+        {
+          "n": 71,
+          "owned": false
+        },
+        {
+          "n": 72,
+          "owned": false
+        },
+        {
+          "n": 73,
+          "owned": false
+        },
+        {
+          "n": 74,
+          "owned": false
+        }
+      ]
+    },
+    {
+      "id": "s_berserk",
+      "name": "Berserk",
+      "author": "Kentaro Miura",
+      "cover": null,
+      "createdAt": 1776956178607,
+      "volumes": [
+        {
+          "n": 1,
+          "owned": true
+        },
+        {
+          "n": 2,
+          "owned": true
+        },
+        {
+          "n": 3,
+          "owned": true
+        },
+        {
+          "n": 4,
+          "owned": true
+        },
+        {
+          "n": 5,
+          "owned": true
+        },
+        {
+          "n": 6,
+          "owned": true
+        },
+        {
+          "n": 7,
+          "owned": true
+        },
+        {
+          "n": 8,
+          "owned": true
+        },
+        {
+          "n": 9,
+          "owned": true
+        },
+        {
+          "n": 10,
+          "owned": true
+        },
+        {
+          "n": 11,
+          "owned": true
+        },
+        {
+          "n": 12,
+          "owned": true
+        },
+        {
+          "n": 13,
+          "owned": true
+        },
+        {
+          "n": 14,
+          "owned": true
+        },
+        {
+          "n": 15,
+          "owned": false
+        },
+        {
+          "n": 16,
+          "owned": false
+        },
+        {
+          "n": 17,
+          "owned": false
+        },
+        {
+          "n": 18,
+          "owned": false
+        },
+        {
+          "n": 19,
+          "owned": false
+        },
+        {
+          "n": 20,
+          "owned": false
+        },
+        {
+          "n": 21,
+          "owned": false
+        },
+        {
+          "n": 22,
+          "owned": false
+        },
+        {
+          "n": 23,
+          "owned": false
+        },
+        {
+          "n": 24,
+          "owned": false
+        },
+        {
+          "n": 25,
+          "owned": false
+        },
+        {
+          "n": 26,
+          "owned": false
+        },
+        {
+          "n": 27,
+          "owned": false
+        },
+        {
+          "n": 28,
+          "owned": false
+        },
+        {
+          "n": 29,
+          "owned": false
+        },
+        {
+          "n": 30,
+          "owned": false
+        },
+        {
+          "n": 31,
+          "owned": false
+        },
+        {
+          "n": 32,
+          "owned": false
+        },
+        {
+          "n": 33,
+          "owned": false
+        },
+        {
+          "n": 34,
+          "owned": false
+        },
+        {
+          "n": 35,
+          "owned": false
+        },
+        {
+          "n": 36,
+          "owned": false
+        },
+        {
+          "n": 37,
+          "owned": false
+        },
+        {
+          "n": 38,
+          "owned": false
+        },
+        {
+          "n": 39,
+          "owned": false
+        },
+        {
+          "n": 40,
+          "owned": false
+        },
+        {
+          "n": 41,
+          "owned": false
+        },
+        {
+          "n": 42,
+          "owned": false
+        }
+      ]
+    }
+  ]
+}
