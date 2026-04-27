@@ -1273,6 +1273,193 @@
   }
 
   input[type="file"] { display: none; }
+
+  /* ====== SCANNER ISBN ====== */
+  .scanner-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 110;
+    flex-direction: column;
+  }
+  .scanner-backdrop.active { display: flex; }
+
+  .scanner-video-wrap {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #scannerVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .scanner-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  /* Dimout attorno alla finestra di scansione */
+  .scanner-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    -webkit-mask:
+      linear-gradient(#000,#000) top/100% calc(50% - 60px),
+      linear-gradient(#000,#000) bottom/100% calc(50% - 60px),
+      linear-gradient(#000,#000) left/calc(50% - 120px) 100%,
+      linear-gradient(#000,#000) right/calc(50% - 120px) 100%;
+    -webkit-mask-composite: destination-out;
+    mask-composite: exclude;
+  }
+  .scanner-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 240px;
+    height: 120px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px rgba(255,90,60,0.3);
+  }
+  .scanner-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scanLine 2s ease-in-out infinite;
+    top: 0;
+  }
+  @keyframes scanLine {
+    0%   { top: 0%; opacity: 1; }
+    45%  { top: 100%; opacity: 1; }
+    50%  { opacity: 0; }
+    55%  { top: 0%; opacity: 0; }
+    60%  { opacity: 1; }
+    100% { top: 100%; opacity: 1; }
+  }
+  .scanner-corners::before,
+  .scanner-corners::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    border-color: #fff;
+    border-style: solid;
+  }
+  .scanner-corners::before {
+    top: -2px; left: -2px;
+    border-width: 3px 0 0 3px;
+    border-radius: 6px 0 0 0;
+  }
+  .scanner-corners::after {
+    bottom: -2px; right: -2px;
+    border-width: 0 3px 3px 0;
+    border-radius: 0 0 6px 0;
+  }
+
+  .scanner-footer {
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+    text-align: center;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(8px);
+  }
+  .scanner-hint {
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  .scanner-hint strong { color: #fff; }
+  .scanner-isbn-manual {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .scanner-isbn-manual input {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    outline: none;
+    border-radius: var(--radius-md);
+    -webkit-appearance: none;
+  }
+  .scanner-isbn-manual input::placeholder { color: rgba(255,255,255,0.4); }
+  .scanner-isbn-manual input:focus { border-color: var(--accent); }
+  .scanner-isbn-manual button {
+    padding: 11px 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .scanner-close-btn {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 11px 24px;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+  }
+  .scanner-status {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 12px;
+    min-height: 18px;
+  }
+  .scanner-status.found { color: #4cc088; }
+  .scanner-status.error { color: #ff7559; }
+
+  /* Pulsante scansiona ISBN nel modale "Cosa aggiungere" */
+  .scan-isbn-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    padding: 14px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--ink);
+    color: var(--surface);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.08s;
+    margin-bottom: 10px;
+  }
+  .scan-isbn-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .scan-isbn-btn .scan-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .scan-isbn-btn .scan-text { line-height: 1.2; }
+  .scan-isbn-btn .scan-sub {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.6;
+    margin-top: 2px;
+  }
 </style>
 </head>
 <body>
@@ -1478,11 +1665,18 @@
   <div class="modal">
     <h3>Cosa aggiungere?</h3>
     <div class="modal-sub">Scegli il tipo di voce</div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+    <div style="display:flex;flex-direction:column;gap:0;margin-bottom:16px">
+      <button class="scan-isbn-btn" id="scanIsbnBtn">
+        <span class="scan-icon">▦</span>
+        <span class="scan-text">
+          Scansiona ISBN
+          <span class="scan-sub">Inquadra il codice a barre del manga</span>
+        </span>
+      </button>
       <button class="text-btn" id="addToCollection" style="padding:14px;font-size:14px;justify-content:flex-start">
         📚 &nbsp;Alla collezione
       </button>
-      <button class="text-btn" id="addToWishlist" style="padding:14px;font-size:14px;justify-content:flex-start">
+      <button class="text-btn" id="addToWishlist" style="padding:14px;font-size:14px;justify-content:flex-start;margin-top:8px">
         ⭐ &nbsp;Alla wishlist
       </button>
     </div>
@@ -1514,13 +1708,19 @@
       <span class="menu-item-hint" id="themeHint">Off</span>
     </button>
 
+    <h4>Condividi</h4>
+    <button class="menu-item" id="shareAppBtn">
+      <span>↗ &nbsp;Condividi l'app</span>
+      <span class="menu-item-hint">Invia il link a un amico</span>
+    </button>
+
     <h4>Dati</h4>
     <button class="menu-item" id="exportBtn">↓ &nbsp;Esporta tutto (JSON)</button>
     <button class="menu-item" id="importBtn">↑ &nbsp;Importa da JSON</button>
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.5</div>
+      <div class="version-number">v1.6</div>
       <div class="version-author">di <span>Fandronius</span></div>
     </div>
   </div>
@@ -1529,18 +1729,39 @@
 <input type="file" id="importFile" accept="application/json,.json" />
 <input type="file" id="coverUploadFile" accept="image/*" />
 
+<!-- ================== SCANNER ISBN ================== -->
+<div class="scanner-backdrop" id="scannerBackdrop">
+  <div class="scanner-video-wrap">
+    <video id="scannerVideo" autoplay playsinline muted></video>
+    <div class="scanner-overlay"></div>
+    <div class="scanner-frame">
+      <div class="scanner-line"></div>
+      <div class="scanner-corners"></div>
+    </div>
+  </div>
+  <div class="scanner-footer">
+    <div class="scanner-status" id="scannerStatus">Inquadra il codice a barre ISBN</div>
+    <div class="scanner-isbn-manual">
+      <input type="number" id="isbnManualInput" placeholder="Inserisci ISBN a mano…" inputmode="numeric" />
+      <button id="isbnManualGo">OK</button>
+    </div>
+    <button class="scanner-close-btn" id="scannerCloseBtn">Annulla</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 /* =========================================================================
-   Tankōbon v1.5
+   Tankōbon v1.6
    - Redesign completo in stile pulito/moderno
    - Tag multipli per serie con lista preimpostata + custom
    - Filtro per tag
    - Sezione "Consigliati" in wishlist con trending AniList
+   - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2884,6 +3105,204 @@ async function reloadAndRender() {
   updateTabCounts();
 }
 
+/* =========================================================================
+   SCANNER ISBN
+   Flusso: BarcodeDetector API (nativa) → fallback ZXing-js (WASM, ~600KB)
+   Poi: Open Library per titolo → AniList per dati manga completi + copertina
+   ========================================================================= */
+
+let scannerStream = null;
+let scannerAnimFrame = null;
+let scannerActive = false;
+let barcodeDetector = null;
+let zxingReader = null;
+
+/* Carica ZXing solo se BarcodeDetector non è disponibile */
+async function loadZXing() {
+  if (zxingReader) return zxingReader;
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
+    script.onload = () => {
+      try {
+        const reader = new ZXing.BrowserMultiFormatReader();
+        zxingReader = reader;
+        resolve(reader);
+      } catch (e) { reject(e); }
+    };
+    script.onerror = () => reject(new Error('ZXing load failed'));
+    document.head.appendChild(script);
+  });
+}
+
+async function openScanner() {
+  document.getElementById('newKindModal').classList.remove('active');
+  const backdrop = document.getElementById('scannerBackdrop');
+  const video = document.getElementById('scannerVideo');
+  const statusEl = document.getElementById('scannerStatus');
+
+  scannerActive = true;
+  backdrop.classList.add('active');
+  statusEl.textContent = 'Avvio fotocamera…';
+  statusEl.className = 'scanner-status';
+
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+    statusEl.textContent = 'Inquadra il codice a barre ISBN';
+
+    // Prova BarcodeDetector nativa (Chrome Android)
+    if ('BarcodeDetector' in window) {
+      barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+      startNativeDetection(video, statusEl);
+    } else {
+      // Fallback ZXing
+      statusEl.textContent = 'Caricamento scanner…';
+      try {
+        await loadZXing();
+        statusEl.textContent = 'Inquadra il codice a barre ISBN';
+        startZXingDetection(video, statusEl);
+      } catch {
+        statusEl.textContent = 'Scanner non disponibile — inserisci ISBN a mano';
+        statusEl.className = 'scanner-status error';
+      }
+    }
+  } catch (err) {
+    statusEl.textContent = 'Fotocamera non disponibile — inserisci ISBN a mano';
+    statusEl.className = 'scanner-status error';
+    console.error(err);
+  }
+}
+
+function startNativeDetection(video, statusEl) {
+  if (!scannerActive) return;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  async function detect() {
+    if (!scannerActive) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      try {
+        const codes = await barcodeDetector.detect(canvas);
+        if (codes.length > 0) {
+          const isbn = codes[0].rawValue;
+          await handleDetectedISBN(isbn, statusEl);
+          return;
+        }
+      } catch {}
+    }
+    scannerAnimFrame = requestAnimationFrame(detect);
+  }
+  scannerAnimFrame = requestAnimationFrame(detect);
+}
+
+function startZXingDetection(video, statusEl) {
+  if (!scannerActive || !zxingReader) return;
+  zxingReader.decodeFromVideoElement(video, (result, err) => {
+    if (!scannerActive) return;
+    if (result) {
+      handleDetectedISBN(result.getText(), statusEl);
+    }
+  });
+}
+
+async function handleDetectedISBN(raw, statusEl) {
+  if (!scannerActive) return;
+  const isbn = raw.replace(/[^0-9X]/gi, '');
+  if (isbn.length < 10) return; // non è un ISBN valido
+
+  // Blocca ulteriori rilevamenti
+  scannerActive = false;
+  if (scannerAnimFrame) cancelAnimationFrame(scannerAnimFrame);
+  if (zxingReader) { try { zxingReader.reset(); } catch {} }
+
+  statusEl.textContent = `ISBN ${isbn} — ricerca in corso…`;
+  statusEl.className = 'scanner-status';
+
+  // Vibra se disponibile
+  if (navigator.vibrate) navigator.vibrate(100);
+
+  await lookupISBNAndOpen(isbn, statusEl);
+}
+
+async function lookupISBNAndOpen(isbn, statusEl) {
+  try {
+    // Step 1: Open Library per ottenere il titolo dall'ISBN
+    const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+    if (!olRes.ok) throw new Error('Open Library non raggiungibile');
+    const olData = await olRes.json();
+    const key = `ISBN:${isbn}`;
+    const book = olData[key];
+
+    let searchTitle = '';
+    if (book && book.title) {
+      // Pulisce il titolo: rimuove "Vol. X", "Volume X", numeri finali ecc.
+      searchTitle = book.title
+        .replace(/,?\s*(vol\.?|volume|tome|band|t\.)\s*\d+/gi, '')
+        .replace(/\s+\d+$/, '')
+        .trim();
+    }
+
+    if (!searchTitle) {
+      // Fallback: isbn direttamente come query su AniList
+      searchTitle = isbn;
+    }
+
+    if (statusEl) {
+      statusEl.textContent = searchTitle !== isbn
+        ? `"${searchTitle}" trovato — cerca su AniList…`
+        : 'Cerca su AniList…';
+      statusEl.className = 'scanner-status found';
+    }
+
+    // Step 2: Chiudi scanner e apri ricerca AniList con il titolo trovato
+    await new Promise(r => setTimeout(r, 800)); // lascia leggere il messaggio
+    closeScanner();
+
+    // Apri modale scegli tipo → poi serie con titolo pre-compilato
+    document.getElementById('newKindModal').classList.add('active');
+
+    // Memorizziamo il titolo per pre-compilare quando aprono il modale
+    window._isbnPrefill = searchTitle;
+
+  } catch (err) {
+    console.error(err);
+    if (statusEl) {
+      statusEl.textContent = 'Errore ricerca — inserisci ISBN a mano o cerca per titolo';
+      statusEl.className = 'scanner-status error';
+    }
+    // Riattiva scanner dopo errore
+    scannerActive = true;
+    if ('BarcodeDetector' in window) {
+      startNativeDetection(document.getElementById('scannerVideo'), statusEl);
+    } else if (zxingReader) {
+      startZXingDetection(document.getElementById('scannerVideo'), statusEl);
+    }
+  }
+}
+
+function closeScanner() {
+  scannerActive = false;
+  if (scannerAnimFrame) cancelAnimationFrame(scannerAnimFrame);
+  if (zxingReader) { try { zxingReader.reset(); } catch {} }
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  const video = document.getElementById('scannerVideo');
+  video.srcObject = null;
+  document.getElementById('scannerBackdrop').classList.remove('active');
+  document.getElementById('scannerStatus').textContent = 'Inquadra il codice a barre ISBN';
+  document.getElementById('scannerStatus').className = 'scanner-status';
+  document.getElementById('isbnManualInput').value = '';
+}
+
 /* ---------- Eventi ---------- */
 document.getElementById('addSeriesBtn').addEventListener('click', () => {
   if (currentTab === 'wishlist') {
@@ -2894,15 +3313,56 @@ document.getElementById('addSeriesBtn').addEventListener('click', () => {
   }
 });
 
+// Scanner ISBN
+document.getElementById('scanIsbnBtn').addEventListener('click', openScanner);
+document.getElementById('scannerCloseBtn').addEventListener('click', () => {
+  closeScanner();
+});
+document.getElementById('scannerBackdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'scannerBackdrop') closeScanner();
+});
+document.getElementById('isbnManualGo').addEventListener('click', async () => {
+  const isbn = document.getElementById('isbnManualInput').value.trim();
+  if (!isbn) return;
+  const statusEl = document.getElementById('scannerStatus');
+  await lookupISBNAndOpen(isbn, statusEl);
+});
+document.getElementById('isbnManualInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('isbnManualGo').click();
+});
+
 document.getElementById('addToCollection').addEventListener('click', () => {
   newKind = 'collection';
   document.getElementById('newKindModal').classList.remove('active');
   openAddModal();
+  // Pre-compila se arrivato da scansione ISBN
+  if (window._isbnPrefill) {
+    document.getElementById('seriesNameInput').value = window._isbnPrefill;
+    // Avvia ricerca AniList automaticamente con il titolo
+    const title = window._isbnPrefill;
+    window._isbnPrefill = null;
+    setTimeout(() => {
+      document.getElementById('searchQueryInput').value = title;
+      openSearchModal();
+      runSearch(title);
+    }, 100);
+  }
 });
 document.getElementById('addToWishlist').addEventListener('click', () => {
   newKind = 'wishlist';
   document.getElementById('newKindModal').classList.remove('active');
   openAddModal();
+  // Pre-compila se arrivato da scansione ISBN
+  if (window._isbnPrefill) {
+    document.getElementById('seriesNameInput').value = window._isbnPrefill;
+    const title = window._isbnPrefill;
+    window._isbnPrefill = null;
+    setTimeout(() => {
+      document.getElementById('searchQueryInput').value = title;
+      openSearchModal();
+      runSearch(title);
+    }, 100);
+  }
 });
 document.getElementById('newKindCancel').addEventListener('click', () => {
   document.getElementById('newKindModal').classList.remove('active');
@@ -3007,6 +3467,21 @@ menuSheet.addEventListener('click', (e) => {
 });
 
 document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+document.getElementById('shareAppBtn').addEventListener('click', async () => {
+  menuSheet.classList.remove('active');
+  const appUrl = 'https://fandronius.github.io/tankobon/';
+  const shareData = {
+    title: 'Tankōbon — Manga Tracker',
+    text: '📚 Traccia la tua collezione di manga. Gratuito, offline, nessun account.',
+    url: appUrl
+  };
+  if (navigator.share) {
+    try { await navigator.share(shareData); }
+    catch (err) { if (err.name !== 'AbortError') fallbackCopy(appUrl); }
+  } else {
+    fallbackCopy(appUrl);
+  }
+});
 document.getElementById('exportBtn').addEventListener('click', () => { menuSheet.classList.remove('active'); exportData(); });
 document.getElementById('importBtn').addEventListener('click', () => { menuSheet.classList.remove('active'); document.getElementById('importFile').click(); });
 document.getElementById('importFile').addEventListener('change', (e) => {
