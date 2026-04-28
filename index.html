@@ -1307,117 +1307,51 @@
   }
 
 
-  /* ====== ONBOARDING ====== */
-  .onboarding-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(15,15,20,0.6);
-    backdrop-filter: blur(6px);
-    z-index: 200;
-    align-items: flex-end;
-    justify-content: center;
-    padding: 0;
-  }
-  .onboarding-backdrop.active { display: flex; }
 
-  .onboarding-sheet {
-    background: var(--surface);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    width: 100%;
-    max-width: 480px;
-    padding: 0 0 calc(20px + env(safe-area-inset-bottom));
-    animation: sheetSlide 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-    overflow: hidden;
+    @keyframes ptrSpin {
+    to { transform: rotate(360deg); }
   }
-
-  .onboarding-slides {
-    display: flex;
-    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  .onboarding-slide {
-    min-width: 100%;
-    padding: 32px 28px 20px;
-  }
-
-  .onboarding-emoji {
-    font-size: 48px;
-    margin-bottom: 16px;
-    display: block;
-    line-height: 1;
-  }
-
-  .onboarding-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 26px;
-    font-weight: 400;
-    letter-spacing: -0.4px;
-    margin-bottom: 10px;
-    color: var(--ink);
-    line-height: 1.15;
-  }
-
-  .onboarding-body {
-    font-size: 15px;
-    color: var(--ink-soft);
-    line-height: 1.55;
-  }
-  .onboarding-body strong { color: var(--ink); font-weight: 600; }
-
-  .onboarding-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 28px 0;
-    gap: 12px;
-  }
-
-  .onboarding-dots {
-    display: flex;
-    gap: 6px;
-    flex: 1;
-    justify-content: center;
-  }
-  .onboarding-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--line);
-    transition: all 0.2s;
-  }
-  .onboarding-dot.active {
-    background: var(--accent);
-    width: 18px;
-    border-radius: 3px;
-  }
-
-  .onboarding-btn-skip {
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--muted);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 8px 4px;
-    flex-shrink: 0;
-  }
-  .onboarding-btn-next {
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 700;
-    color: #fff;
-    background: var(--accent);
-    border: none;
-    cursor: pointer;
-    padding: 11px 22px;
-    border-radius: var(--radius-full);
-    flex-shrink: 0;
-    transition: transform 0.08s, opacity 0.15s;
-  }
-  .onboarding-btn-next:active { transform: scale(0.96); }
 
   input[type="file"] { display: none; }
+
+    /* ====== PULL TO REFRESH ====== */
+  .ptr-indicator {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 60;
+    pointer-events: none;
+  }
+  .ptr-indicator.visible { opacity: 1; }
+  .ptr-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: ptr-spin 0.7s linear infinite;
+    display: none;
+  }
+  .ptr-indicator.loading .ptr-spinner { display: block; }
+  .ptr-indicator.loading .ptr-arrow  { display: none; }
+  @keyframes ptr-spin { to { transform: rotate(360deg); } }
+  .ptr-arrow {
+    font-size: 15px;
+    display: inline-block;
+    transition: transform 0.2s;
+  }
+  .ptr-arrow.flipped { transform: rotate(180deg); }
 
   /* ====== SCANNER ISBN ====== */
   .scanner-backdrop {
@@ -1611,6 +1545,11 @@
 
 <!-- ================== VISTA LISTA ================== -->
 <div class="main-view">
+  <div class="ptr-indicator" id="ptrIndicator">
+    <div class="ptr-spinner"></div>
+    <span class="ptr-arrow" id="ptrArrow">↓</span>
+    <span id="ptrLabel">Trascina per aggiornare</span>
+  </div>
   <header class="app-header">
     <div class="brand">
       <div class="brand-logo">巻</div>
@@ -1876,7 +1815,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.8.1 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.8.2 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1894,7 +1833,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.8.1</div>
+      <div class="version-number">v1.8.2</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2006,7 +1945,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.8.2';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2456,6 +2395,7 @@ function closeDetail() {
   currentSeriesId = null;
   document.body.classList.remove('detail-open');
   document.getElementById('detailView').classList.remove('active');
+  renderSeriesList(); // aggiorna le card al ritorno dal dettaglio
 }
 function renderDetail() {
   const s = seriesCache.find(x => x.id === currentSeriesId);
@@ -2552,6 +2492,7 @@ async function toggleVolume(n) {
   const idx = seriesCache.findIndex(x => x.id === s.id);
   if (idx >= 0) seriesCache[idx] = s;
   renderDetail();
+  renderSeriesList(); // aggiorna la card in lista in tempo reale
 }
 
 async function addNextVolume() {
@@ -2565,6 +2506,7 @@ async function addNextVolume() {
   const idx = seriesCache.findIndex(x => x.id === s.id);
   if (idx >= 0) seriesCache[idx] = s;
   renderDetail();
+  renderSeriesList(); // aggiorna la card in lista in tempo reale
   toast(`Vol. #${newN} aggiunto`);
 }
 
@@ -3953,6 +3895,108 @@ if ('serviceWorker' in navigator) {
     window.location.reload(true);
   });
 }
+
+
+/* =========================================================================
+   PULL TO REFRESH
+   Attivo solo nella main-view, non nel dettaglio.
+   Soglia: 70px. Haptic feedback se disponibile.
+   ========================================================================= */
+
+
+
+/* =========================================================================
+   PULL-TO-REFRESH
+   Attivo solo nella main-view, non nel dettaglio.
+   Soglia: 72px di trascinamento verso il basso partendo dall'alto della pagina.
+   ========================================================================= */
+
+
+
+/* =========================================================================
+   PULL TO REFRESH
+   Trascina verso il basso dalla cima della lista per ricaricare dal DB.
+   ========================================================================= */
+
+
+
+/* =========================================================================
+   PULL TO REFRESH — trascina verso il basso per ricaricare dal DB
+   Attivo solo nella main-view, non nel dettaglio.
+   ========================================================================= */
+(function initPullToRefresh() {
+  const THRESHOLD = 68;
+  const MAX_DRAG  = 110;
+
+  let touchStartY  = 0;
+  let pulling      = false;
+  let refreshing   = false;
+
+  const el    = document.getElementById('ptrIndicator');
+  const arrow = document.getElementById('ptrArrow');
+  const lbl   = document.getElementById('ptrLabel');
+
+  function canStart() {
+    return !document.body.classList.contains('detail-open') && window.scrollY === 0;
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (!canStart()) return;
+    touchStartY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling || refreshing) return;
+    const drag = Math.max(0, Math.min(e.touches[0].clientY - touchStartY, MAX_DRAG));
+    if (drag <= 0) { pulling = false; return; }
+
+    // Damping: l'indicatore appare scendendo da -100% verso 0
+    const pct = Math.min(drag / THRESHOLD, 1);
+    el.style.transform = `translateY(calc(-100% + ${drag * 0.55}px))`;
+    el.classList.add('visible');
+    el.classList.remove('loading');
+
+    if (drag >= THRESHOLD) {
+      arrow.classList.add('flipped');
+      lbl.textContent = 'Rilascia per aggiornare';
+    } else {
+      arrow.classList.remove('flipped');
+      lbl.textContent = 'Trascina per aggiornare';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async e => {
+    if (!pulling || refreshing) return;
+    pulling = false;
+    const drag = Math.max(0, e.changedTouches[0].clientY - touchStartY);
+
+    if (drag < THRESHOLD) {
+      // Niente refresh — ritira indicatore
+      el.style.transform = '';
+      el.classList.remove('visible');
+      return;
+    }
+
+    // Avvia refresh
+    refreshing = true;
+    el.style.transform = 'translateY(0)';
+    el.classList.add('visible', 'loading');
+    lbl.textContent = 'Aggiornamento…';
+    arrow.classList.remove('flipped');
+
+    try {
+      await reloadAndRender();
+    } catch(err) { console.error(err); }
+
+    await new Promise(r => setTimeout(r, 500));
+    el.style.transform = '';
+    el.classList.remove('visible', 'loading');
+    lbl.textContent = 'Trascina per aggiornare';
+    refreshing = false;
+    touchStartY = 0;
+  });
+})();
 
 /* ---------- Init ---------- */
 loadTheme();
