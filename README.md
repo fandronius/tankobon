@@ -36,6 +36,10 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 - Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
 - Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
 
+### v1.9.3
+- Fix URL Cloudflare Worker: aggiornato a `tankobon-proxy.fandroleto.workers.dev`
+- Worker ora su repo separato `tankobon-worker` per compatibilità con Cloudflare Pages CI
+
 ### v1.9.2
 - **Soluzione definitiva CORS AniList**: aggiunto Cloudflare Worker proprio (`tankobon.fandroleto.workers.dev`) come endpoint primario
 - Il Worker fa da proxy verso AniList con header CORS corretti, senza rate limit (100k req/giorno gratis su Cloudflare)
