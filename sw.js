@@ -1,4 +1,4 @@
-// Service Worker: consente l'uso dell'app offline una volta caricata la prima volta
+// Service Worker v1.6 — gestisce aggiornamenti su richiesta
 const CACHE = 'manga-tracker-v2';
 const ASSETS = [
   './',
@@ -12,7 +12,7 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).catch(() => {})
   );
-  self.skipWaiting();
+  // Non fa skipWaiting automatico: aspetta il comando dall'app
 });
 
 self.addEventListener('activate', (e) => {
@@ -24,8 +24,14 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
+// Messaggio dall'app: attiva il nuovo SW
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', (e) => {
-  // strategia: cache-first per i file dell'app, network-first per i font
   const url = new URL(e.request.url);
   if (url.origin === location.origin) {
     e.respondWith(
@@ -36,7 +42,6 @@ self.addEventListener('fetch', (e) => {
       }).catch(() => cached))
     );
   } else {
-    // font google, ecc: tenta rete, fallback cache
     e.respondWith(
       fetch(e.request).then((res) => {
         const clone = res.clone();
