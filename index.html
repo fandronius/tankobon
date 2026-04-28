@@ -2922,24 +2922,22 @@ function handleCoverUpload(file) {
 /* ---------- AniList (ricerca serie) ---------- */
 /* Fetch AniList con timeout esplicito e no-cache per evitare interferenze SW */
 async function anilistFetch(body) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const status = document.getElementById('status');
 
   try {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',
       mode: 'cors',
       credentials: 'omit',
+      cache: 'no-store',
+      redirect: 'follow',
+      referrerPolicy: 'no-referrer',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-      cache: 'no-store'
+      body: JSON.stringify(body)
     });
-
-    clearTimeout(timer);
 
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
@@ -2947,19 +2945,15 @@ async function anilistFetch(body) {
 
     const json = await res.json();
 
-    if (json.errors && json.errors.length) {
-      throw new Error(json.errors[0].message || 'GraphQL error');
+    if (json.errors?.length) {
+      throw new Error(json.errors[0].message);
     }
 
     return json;
 
   } catch (err) {
-    clearTimeout(timer);
-
-    if (err.name === 'AbortError') {
-      throw new Error('Timeout');
-    }
-
+    console.error(err);
+    status.textContent = `Errore AniList: ${err.message}`;
     throw err;
   }
 }
