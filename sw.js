@@ -42,14 +42,14 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
   // Bypass: POST, API esterne, schemi non-http
-  if (
-    e.request.method !== 'GET' ||
-    BYPASS_HOSTS.some(h => url.href.includes(h)) ||
+if (
+    e.request.method !== 'GET' || 
+    e.request.url.includes('graphql.anilist.co') || // Forza il bypass per AniList
+    BYPASS_HOSTS.some(h => url.hostname.includes(h)) || 
     !url.protocol.startsWith('http')
-  ) {
-    return;
-  }
-
+) {
+    return; // Non fare nulla, lascia che la richiesta vada diretta in rete
+}
   if (url.origin === location.origin) {
     // File app: cache-first
     e.respondWith(
