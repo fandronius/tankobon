@@ -39,32 +39,27 @@ self.addEventListener('message', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
+    const url = new URL(e.request.url);
 
-  // Bypass: POST, API esterne, schemi non-http
-if (
-    e.request.method !== 'GET' || 
-    e.request.url.includes('graphql.anilist.co') || // Forza il bypass per AniList
-    BYPASS_HOSTS.some(h => url.hostname.includes(h)) || 
-    !url.protocol.startsWith('http')
-) {
-    return; // Non fare nulla, lascia che la richiesta vada diretta in rete
-}
-  if (url.origin === location.origin) {
-    // File app: cache-first
-    e.respondWith(
-      caches.match(e.request).then((cached) =>
-        cached || fetch(e.request).then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
-          return res;
-        })
-      )
-    );
-  } else {
-    // Risorse GET esterne (copertine ecc.): network-first
-    e.respondWith(
-      fetch(e.request).then((res) => {
+    // Se è AniList, usciamo immediatamente. 
+    // Non chiamando e.respondWith(), il browser gestisce la fetch normalmente.
+    if (e.request.url.includes('graphql.anilist.co')) {
+        return; 
+    }
+
+    // Bypass per altri casi (POST, protocolli non-http, etc.)
+    if (
+        e.request.method !== 'GET' || 
+        BYPASS_HOSTS.some(h => url.hostname.includes(h)) || 
+        !url.protocol.startsWith('http')
+    ) {
+        return; 
+    }
+
+    // Solo per i file della tua app (GET e stesso origin) usiamo la cache
+    if (url.origin === location.origin) {
+        e.respondWith(
+        fetch(e.request).then((res) => {
         if (res.ok) {
           const clone = res.clone();
           caches.open(CACHE).then((cache) => cache.put(e.request, clone));
