@@ -27,6 +27,11 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 
 ## Changelog
 
+### v1.8.1
+- Fix bug: percentuale sempre 0% nella schermata principale anche con tutti i volumi posseduti
+- Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
+- Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
+
 ### v1.8
 - Verifica aggiornamenti nel menu ☰ (confronta versione locale con GitHub)
 - Service worker aggiornato: attivazione su richiesta con SKIP_WAITING
