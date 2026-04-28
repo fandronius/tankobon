@@ -36,6 +36,33 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 - Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
 - Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
 
+### v1.8.6
+- Fix critico: tutte le chiamate AniList centralizzate in `anilistFetch()` con `cache: 'no-store'` per evitare interferenze del service worker
+- Aggiunto timeout di 10 secondi su ogni richiesta AniList
+- Messaggi di errore più precisi: distingue timeout, nessuna connessione, errore HTTP
+
+### v1.8.5
+- Fix critico service worker: le richieste POST verso AniList e OpenLibrary non vengono più intercettate/cachate (la Cache API ignora il body delle POST causando errori silenziosi)
+- SW aggiornato a versione v3 con lista domini bypass esplicita
+
+### v1.8.4
+- Fix onboarding: il CSS era andato perso durante cleanup precedenti, l'onboarding appariva fisso a schermo invece di essere nascosto
+- Ripristinato `display: none` di default sul backdrop
+
+### v1.8.3
+- Fix ricerca AniList dal bottone rosso nella lista principale: `openSearchModal()` ora ricorda se è stata aperta dal form o standalone, e "Indietro" si comporta di conseguenza
+- Aggiunta funzione `closeSearchModal()` centralizzata
+
+### v1.8.2
+- Pull-to-refresh: trascina verso il basso dalla cima della lista per ricaricare dal DB
+- Indicatore animato con freccia e spinner
+- Attivo solo nella vista principale, non nel dettaglio
+
+### v1.8.1
+- Fix bug: percentuale sempre 0% nella schermata principale anche con tutti i volumi posseduti
+- Fix `computeStats`: calcola percentuale reale anche per serie ongoing
+- Fix: spostare da wishlist a collezione non imposta più `ongoing: true` automaticamente
+
 ### v1.8
 - Verifica aggiornamenti nel menu ☰ (confronta versione locale con GitHub)
 - Service worker aggiornato: attivazione su richiesta con SKIP_WAITING
