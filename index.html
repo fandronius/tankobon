@@ -15,7 +15,7 @@
 
 <style>
   /* =====================================================
-     TANKŌBON v1.5 — Redesign pulito e moderno
+     TANKŌBON v1.8 — Redesign pulito e moderno
      Palette: bianco/grigi, accent corallo vivo
      Tipografia: DM Sans (principale) + DM Serif (display)
      ===================================================== */
@@ -1851,6 +1851,18 @@
   </div>
 </div>
 
+<!-- ================== MODALE AGGIORNAMENTO ================== -->
+<div class="modal-backdrop" id="updateModal">
+  <div class="modal">
+    <h3 id="updateModalTitle">Aggiornamento disponibile</h3>
+    <div class="modal-sub" id="updateModalSub"></div>
+    <div class="modal-buttons">
+      <button class="btn" id="updateModalCancel">Dopo</button>
+      <button class="btn btn-primary" id="updateModalOk">Aggiorna ora</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================== MENU ================== -->
 <div class="menu-sheet" id="menuSheet">
   <div class="menu-content">
@@ -1862,6 +1874,10 @@
     </button>
 
     <h4>Condividi</h4>
+    <button class="menu-item" id="checkUpdateBtn">
+      <span>↻ &nbsp;Verifica aggiornamenti</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.8 installata</span>
+    </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
       <span class="menu-item-hint">Invia il link a un amico</span>
@@ -1878,8 +1894,17 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.6</div>
+      <div class="version-number">v1.8</div>
       <div class="version-author">di <span>Fandronius</span></div>
+      <div style="margin-top:10px">
+        <a id="readmeLink"
+           href="https://fandronius.github.io/tankobon/README.md"
+           target="_blank"
+           rel="noopener"
+           style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:600;">
+          📄 Visualizza README &amp; changelog →
+        </a>
+      </div>
     </div>
   </div>
 </div>
@@ -1973,7 +1998,7 @@
 
 <script>
 /* =========================================================================
-   Tankōbon v1.6
+   Tankōbon v1.8
    - Redesign completo in stile pulito/moderno
    - Tag multipli per serie con lista preimpostata + custom
    - Filtro per tag
@@ -1981,7 +2006,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.8';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -3716,6 +3741,19 @@ menuSheet.addEventListener('click', (e) => {
 });
 
 document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+
+// Verifica aggiornamenti
+document.getElementById('checkUpdateBtn').addEventListener('click', async () => {
+  menuSheet.classList.remove('active');
+  await checkForUpdate(true);
+});
+document.getElementById('updateModalCancel').addEventListener('click', () => {
+  document.getElementById('updateModal').classList.remove('active');
+});
+document.getElementById('updateModalOk').addEventListener('click', applyUpdate);
+document.getElementById('updateModal').addEventListener('click', (e) => {
+  if (e.target.id === 'updateModal') document.getElementById('updateModal').classList.remove('active');
+});
 document.getElementById('shareAppBtn').addEventListener('click', async () => {
   menuSheet.classList.remove('active');
   const appUrl = 'https://fandronius.github.io/tankobon/';
@@ -3814,6 +3852,105 @@ document.getElementById('onboardingSkip').addEventListener('click', closeOnboard
     }
   }, { passive: true });
 })();
+
+
+/* =========================================================================
+   VERIFICA AGGIORNAMENTI
+   Confronta APP_VERSION con la versione nel manifest remoto su GitHub Pages.
+   Se diversa, attiva il nuovo service worker e ricarica.
+   ========================================================================= */
+
+const APP_BASE_URL = 'https://fandronius.github.io/tankobon/';
+
+async function checkForUpdate(showResult = false) {
+  const hintEl = document.getElementById('checkUpdateHint');
+  if (hintEl) hintEl.textContent = 'Controllo in corso…';
+
+  try {
+    // Fetch del manifest remoto con cache-bust
+    const res = await fetch(APP_BASE_URL + 'manifest.webmanifest?_=' + Date.now(), {
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const manifest = await res.json();
+
+    // La versione è nel campo "version" che aggiungeremo al manifest
+    const remoteVersion = manifest.version || null;
+
+    if (hintEl) hintEl.textContent = 'v' + APP_VERSION + ' installata';
+
+    if (!remoteVersion) {
+      // manifest senza campo version: controlla il sw
+      await checkSWUpdate(showResult);
+      return;
+    }
+
+    if (remoteVersion !== APP_VERSION) {
+      showUpdateModal(APP_VERSION, remoteVersion);
+    } else {
+      if (showResult) toast('Sei già alla versione più recente (' + APP_VERSION + ')');
+      if (hintEl) hintEl.textContent = 'Aggiornata ✓ v' + APP_VERSION;
+    }
+  } catch (err) {
+    if (hintEl) hintEl.textContent = 'v' + APP_VERSION + ' installata';
+    // Fallback: prova comunque a controllare SW
+    await checkSWUpdate(showResult);
+  }
+}
+
+async function checkSWUpdate(showResult) {
+  if (!('serviceWorker' in navigator)) {
+    if (showResult) toast('Aggiornamento non disponibile offline');
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) {
+      if (showResult) toast('Sei già alla versione più recente');
+      return;
+    }
+    await reg.update();
+    if (reg.waiting) {
+      // C'è già un SW in attesa
+      showUpdateModal(APP_VERSION, null);
+    } else {
+      if (showResult) toast('Sei già alla versione più recente (' + APP_VERSION + ')');
+    }
+  } catch {
+    if (showResult) toast('Impossibile verificare: controlla la connessione');
+  }
+}
+
+function showUpdateModal(currentV, newV) {
+  const modal = document.getElementById('updateModal');
+  document.getElementById('updateModalTitle').textContent = 'Aggiornamento disponibile';
+  document.getElementById('updateModalSub').innerHTML = newV
+    ? `È disponibile la versione <strong>v${newV}</strong>.<br>Versione installata: v${currentV}.<br><br>Vuoi aggiornare adesso? L'app si ricaricherà.`
+    : `È disponibile un aggiornamento.<br>Versione installata: v${currentV}.<br><br>Vuoi aggiornare adesso? L'app si ricaricherà.`;
+  modal.classList.add('active');
+}
+
+async function applyUpdate() {
+  document.getElementById('updateModal').classList.remove('active');
+  // Attiva il SW in attesa e ricarica
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg && reg.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } catch {}
+  }
+  window.location.reload(true);
+}
+
+// Listener SW: quando il nuovo SW prende il controllo, ricarica
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload(true);
+  });
+}
 
 /* ---------- Init ---------- */
 loadTheme();
