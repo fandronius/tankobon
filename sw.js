@@ -1,5 +1,5 @@
-// Service Worker v1.8.7
-const CACHE = 'manga-tracker-v3';
+// Service Worker v1.6 — gestisce aggiornamenti su richiesta
+const CACHE = 'manga-tracker-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -8,19 +8,11 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// Domini API da NON intercettare mai
-const BYPASS_HOSTS = [
-  'graphql.anilist.co',
-  'openlibrary.org',
-  'googleapis.com',
-  'fonts.googleapis.com',
-  'fonts.gstatic.com',
-];
-
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).catch(() => {})
   );
+  // Non fa skipWaiting automatico: aspetta il comando dall'app
 });
 
 self.addEventListener('activate', (e) => {
@@ -32,6 +24,7 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
+// Messaggio dall'app: attiva il nuovo SW
 self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -39,31 +32,20 @@ self.addEventListener('message', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    const url = new URL(e.request.url);
-
-    // Se è AniList, usciamo immediatamente. 
-    // Non chiamando e.respondWith(), il browser gestisce la fetch normalmente.
-    if (e.request.url.includes('graphql.anilist.co')) {
-        return; 
-    }
-
-    // Bypass per altri casi (POST, protocolli non-http, etc.)
-    if (
-        e.request.method !== 'GET' || 
-        BYPASS_HOSTS.some(h => url.hostname.includes(h)) || 
-        !url.protocol.startsWith('http')
-    ) {
-        return; 
-    }
-
-    // Solo per i file della tua app (GET e stesso origin) usiamo la cache
-    if (url.origin === location.origin) {
-        e.respondWith(
-        fetch(e.request).then((res) => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
-        }
+  const url = new URL(e.request.url);
+  if (url.origin === location.origin) {
+    e.respondWith(
+      caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
+        const clone = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+        return res;
+      }).catch(() => cached))
+    );
+  } else {
+    e.respondWith(
+      fetch(e.request).then((res) => {
+        const clone = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(e.request, clone));
         return res;
       }).catch(() => caches.match(e.request))
     );
