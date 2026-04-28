@@ -1272,6 +1272,40 @@
     transform: translateX(-50%) translateY(0);
   }
 
+  /* ====== PULSANTE CERCA SU ANILIST (modale serie) ====== */
+  .anilist-search-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 14px;
+    margin-bottom: 14px;
+    background: var(--accent-soft);
+    border: 1.5px solid var(--accent);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: background 0.15s, transform 0.08s;
+  }
+  .anilist-search-btn:active { transform: scale(0.98); background: #fde0d8; }
+  .anilist-search-icon { font-size: 20px; flex-shrink: 0; }
+  .anilist-search-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+  .anilist-search-sub {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--ink-soft);
+    opacity: 0.8;
+  }
+
   input[type="file"] { display: none; }
 
   /* ====== SCANNER ISBN ====== */
@@ -1589,6 +1623,15 @@
       <label for="seriesNameInput">Nome della serie</label>
       <input type="text" id="seriesNameInput" placeholder="Es. Bleach" maxlength="80" />
     </div>
+
+    <button type="button" id="searchCoverBtn" class="anilist-search-btn">
+      <span class="anilist-search-icon">🔍</span>
+      <span class="anilist-search-text">
+        Cerca su AniList
+        <span class="anilist-search-sub">Compila automaticamente nome, autore, copertina e tag</span>
+      </span>
+    </button>
+
     <div class="form-row">
       <label for="seriesAuthorInput">Autore</label>
       <input type="text" id="seriesAuthorInput" placeholder="Es. Tite Kubo" maxlength="80" />
@@ -1600,7 +1643,6 @@
         <span id="coverPreviewText">Nessuna</span>
       </div>
       <div class="cover-buttons">
-        <button type="button" id="searchCoverBtn">🔍 Cerca online</button>
         <button type="button" id="uploadCoverBtn">📂 Da galleria</button>
         <button type="button" class="remove-cover" id="removeCoverBtn" style="display:none">✕ Rimuovi</button>
       </div>
@@ -1643,7 +1685,7 @@
 <div class="modal-backdrop" id="searchModal">
   <div class="modal">
     <h3>Cerca su AniList</h3>
-    <div class="modal-sub">Copertine ufficiali dei manga</div>
+    <div class="modal-sub">Compila automaticamente nome, autore, copertina e tag</div>
 
     <div class="form-row">
       <label for="searchQueryInput">Titolo da cercare</label>
