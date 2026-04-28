@@ -1307,6 +1307,52 @@
   }
 
 
+
+    @keyframes ptrSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  input[type="file"] { display: none; }
+
+    /* ====== PULL TO REFRESH ====== */
+  .ptr-indicator {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 60;
+    pointer-events: none;
+  }
+  .ptr-indicator.visible { opacity: 1; }
+  .ptr-spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: ptr-spin 0.7s linear infinite;
+    display: none;
+  }
+  .ptr-indicator.loading .ptr-spinner { display: block; }
+  .ptr-indicator.loading .ptr-arrow  { display: none; }
+  @keyframes ptr-spin { to { transform: rotate(360deg); } }
+  .ptr-arrow {
+    font-size: 15px;
+    display: inline-block;
+    transition: transform 0.2s;
+  }
+  .ptr-arrow.flipped { transform: rotate(180deg); }
+
   /* ====== ONBOARDING ====== */
   .onboarding-backdrop {
     display: none;
@@ -1317,7 +1363,6 @@
     z-index: 200;
     align-items: flex-end;
     justify-content: center;
-    padding: 0;
   }
   .onboarding-backdrop.active { display: flex; }
 
@@ -1330,24 +1375,20 @@
     animation: sheetSlide 0.35s cubic-bezier(0.32, 0.72, 0, 1);
     overflow: hidden;
   }
-
   .onboarding-slides {
     display: flex;
     transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   }
-
   .onboarding-slide {
     min-width: 100%;
     padding: 32px 28px 20px;
   }
-
   .onboarding-emoji {
     font-size: 48px;
     margin-bottom: 16px;
     display: block;
     line-height: 1;
   }
-
   .onboarding-title {
     font-family: 'DM Serif Display', serif;
     font-size: 26px;
@@ -1357,14 +1398,12 @@
     color: var(--ink);
     line-height: 1.15;
   }
-
   .onboarding-body {
     font-size: 15px;
     color: var(--ink-soft);
     line-height: 1.55;
   }
   .onboarding-body strong { color: var(--ink); font-weight: 600; }
-
   .onboarding-footer {
     display: flex;
     align-items: center;
@@ -1372,7 +1411,6 @@
     padding: 16px 28px 0;
     gap: 12px;
   }
-
   .onboarding-dots {
     display: flex;
     gap: 6px;
@@ -1390,7 +1428,6 @@
     width: 18px;
     border-radius: 3px;
   }
-
   .onboarding-btn-skip {
     font-family: inherit;
     font-size: 14px;
@@ -1413,11 +1450,9 @@
     padding: 11px 22px;
     border-radius: var(--radius-full);
     flex-shrink: 0;
-    transition: transform 0.08s, opacity 0.15s;
+    transition: transform 0.08s;
   }
   .onboarding-btn-next:active { transform: scale(0.96); }
-
-  input[type="file"] { display: none; }
 
   /* ====== SCANNER ISBN ====== */
   .scanner-backdrop {
@@ -1611,6 +1646,11 @@
 
 <!-- ================== VISTA LISTA ================== -->
 <div class="main-view">
+  <div class="ptr-indicator" id="ptrIndicator">
+    <div class="ptr-spinner"></div>
+    <span class="ptr-arrow" id="ptrArrow">↓</span>
+    <span id="ptrLabel">Trascina per aggiornare</span>
+  </div>
   <header class="app-header">
     <div class="brand">
       <div class="brand-logo">巻</div>
@@ -1876,7 +1916,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.8.1 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.8.8 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1891,10 +1931,14 @@
       <span>📖 &nbsp;Rivedi la guida</span>
       <span class="menu-item-hint">Onboarding</span>
     </button>
+    <button class="menu-item" id="resetCacheBtn" style="color: var(--accent);">
+      <span>🗑 &nbsp;Reset cache app</span>
+      <span class="menu-item-hint">Risolve problemi di connessione</span>
+    </button>
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.8.1</div>
+      <div class="version-number">v1.8.8</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2006,7 +2050,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.8.1';
+const APP_VERSION = '1.8.8';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2456,6 +2500,7 @@ function closeDetail() {
   currentSeriesId = null;
   document.body.classList.remove('detail-open');
   document.getElementById('detailView').classList.remove('active');
+  renderSeriesList(); // aggiorna le card al ritorno dal dettaglio
 }
 function renderDetail() {
   const s = seriesCache.find(x => x.id === currentSeriesId);
@@ -2552,6 +2597,7 @@ async function toggleVolume(n) {
   const idx = seriesCache.findIndex(x => x.id === s.id);
   if (idx >= 0) seriesCache[idx] = s;
   renderDetail();
+  renderSeriesList(); // aggiorna la card in lista in tempo reale
 }
 
 async function addNextVolume() {
@@ -2565,6 +2611,7 @@ async function addNextVolume() {
   const idx = seriesCache.findIndex(x => x.id === s.id);
   if (idx >= 0) seriesCache[idx] = s;
   renderDetail();
+  renderSeriesList(); // aggiorna la card in lista in tempo reale
   toast(`Vol. #${newN} aggiunto`);
 }
 
@@ -2873,6 +2920,50 @@ function handleCoverUpload(file) {
 }
 
 /* ---------- AniList (ricerca serie) ---------- */
+/* Fetch AniList con timeout esplicito e no-cache per evitare interferenze SW */
+async function anilistFetch(body) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const res = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+      cache: 'no-store'
+    });
+
+    clearTimeout(timer);
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const json = await res.json();
+
+    if (json.errors && json.errors.length) {
+      throw new Error(json.errors[0].message || 'GraphQL error');
+    }
+
+    return json;
+
+  } catch (err) {
+    clearTimeout(timer);
+
+    if (err.name === 'AbortError') {
+      throw new Error('Timeout');
+    }
+
+    throw err;
+  }
+}
+
 async function searchAniList(query) {
   const gql = `
     query ($search: String) {
@@ -2889,18 +2980,18 @@ async function searchAniList(query) {
         }
       }
     }`;
-const res = await fetch('https://anilist.co', {
-  method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({ query: gql, variables: { search: query } })
-  });
-  if (!res.ok) throw new Error('AniList HTTP ' + res.status);
-  const data = await res.json();
+  const data = await anilistFetch({ query: gql, variables: { search: query } });
   return (data.data && data.data.Page && data.data.Page.media) || [];
 }
 
+let _searchOpenedFromSeriesModal = false;
+
 function openSearchModal() {
-  document.getElementById('seriesModal').classList.remove('active');
+  const seriesModalOpen = document.getElementById('seriesModal').classList.contains('active');
+  _searchOpenedFromSeriesModal = seriesModalOpen;
+  if (seriesModalOpen) {
+    document.getElementById('seriesModal').classList.remove('active');
+  }
   const q = document.getElementById('seriesNameInput').value.trim();
   document.getElementById('searchQueryInput').value = q;
   document.getElementById('searchResults').style.display = 'none';
@@ -2909,6 +3000,14 @@ function openSearchModal() {
   document.getElementById('searchModal').classList.add('active');
   if (q) runSearch(q);
   else setTimeout(() => document.getElementById('searchQueryInput').focus(), 50);
+}
+
+function closeSearchModal() {
+  document.getElementById('searchModal').classList.remove('active');
+  if (_searchOpenedFromSeriesModal) {
+    document.getElementById('seriesModal').classList.add('active');
+  }
+  _searchOpenedFromSeriesModal = false;
 }
 
 let lastSearchItems = [];
@@ -2949,8 +3048,14 @@ async function runSearch(query) {
       el.addEventListener('click', () => pickSearchResult(lastSearchItems[parseInt(el.dataset.idx, 10)]));
     });
   } catch (err) {
-    status.textContent = 'Errore: controlla la connessione';
-    console.error(err);
+    console.error('AniList search error:', err);
+    if (err.message && err.message.includes('Timeout')) {
+      status.textContent = 'Timeout — riprova tra qualche secondo';
+    } else if (!navigator.onLine) {
+      status.textContent = 'Nessuna connessione internet';
+    } else {
+      status.textContent = 'Errore AniList (' + (err.message || 'sconosciuto') + ')';
+    }
   }
 }
 
@@ -3029,8 +3134,7 @@ async function pickSearchResult(item) {
     }
   }
 
-  document.getElementById('searchModal').classList.remove('active');
-  document.getElementById('seriesModal').classList.add('active');
+  closeSearchModal();
   renderTagEditor();
 
   if (coverUrl) {
@@ -3069,13 +3173,7 @@ async function fetchTrendingManga() {
         }
       }
     }`;
-  const res = await fetch('https://graphql.anilist.co', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-    body: JSON.stringify({ query: gql })
-  });
-  if (!res.ok) throw new Error('AniList HTTP ' + res.status);
-  const data = await res.json();
+  const data = await anilistFetch({ query: gql });
   return (data.data && data.data.Page && data.data.Page.media) || [];
 }
 
@@ -3119,13 +3217,9 @@ async function fetchPersonalRecommendations(seedTitles) {
 
   for (const title of seeds) {
     try {
-      const res = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ query: gql, variables: { search: title } })
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
+      let data;
+      try { data = await anilistFetch({ query: gql, variables: { search: title } }); }
+      catch { continue; }
       const recs = data.data && data.data.Media && data.data.Media.recommendations && data.data.Media.recommendations.edges;
       if (!Array.isArray(recs)) continue;
       for (const edge of recs) {
@@ -3508,59 +3602,75 @@ async function handleDetectedISBN(raw, statusEl) {
 }
 
 async function lookupISBNAndOpen(isbn, statusEl) {
+  const setStatus = (msg, cls = '') => {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.className = 'scanner-status' + (cls ? ' ' + cls : '');
+  };
+
+  setStatus('ISBN rilevato — ricerca in corso…');
+
+  let searchTitle = '';
+
+  // Step 1a: Google Books (ottima copertura manga con ISBN)
   try {
-    // Step 1: Open Library per ottenere il titolo dall'ISBN
-    const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
-    if (!olRes.ok) throw new Error('Open Library non raggiungibile');
-    const olData = await olRes.json();
-    const key = `ISBN:${isbn}`;
-    const book = olData[key];
-
-    let searchTitle = '';
-    if (book && book.title) {
-      // Pulisce il titolo: rimuove "Vol. X", "Volume X", numeri finali ecc.
-      searchTitle = book.title
-        .replace(/,?\s*(vol\.?|volume|tome|band|t\.)\s*\d+/gi, '')
-        .replace(/\s+\d+$/, '')
-        .trim();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const gbRes = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`,
+      { signal: controller.signal, cache: 'no-store' }
+    );
+    clearTimeout(timer);
+    if (gbRes.ok) {
+      const gbData = await gbRes.json();
+      const item = gbData.items && gbData.items[0];
+      if (item && item.volumeInfo && item.volumeInfo.title) {
+        searchTitle = item.volumeInfo.title
+          .replace(/,?\s*(vol\.?|volume|tome|band|t\.|#)\s*\d+/gi, '')
+          .replace(/\s+\d+$/, '')
+          .trim();
+      }
     }
+  } catch (e) { console.warn('Google Books fallito:', e.message); }
 
-    if (!searchTitle) {
-      // Fallback: isbn direttamente come query su AniList
-      searchTitle = isbn;
-    }
-
-    if (statusEl) {
-      statusEl.textContent = searchTitle !== isbn
-        ? `"${searchTitle}" trovato — cerca su AniList…`
-        : 'Cerca su AniList…';
-      statusEl.className = 'scanner-status found';
-    }
-
-    // Step 2: Chiudi scanner e apri ricerca AniList con il titolo trovato
-    await new Promise(r => setTimeout(r, 800)); // lascia leggere il messaggio
-    closeScanner();
-
-    // Apri modale scegli tipo → poi serie con titolo pre-compilato
-    document.getElementById('newKindModal').classList.add('active');
-
-    // Memorizziamo il titolo per pre-compilare quando aprono il modale
-    window._isbnPrefill = searchTitle;
-
-  } catch (err) {
-    console.error(err);
-    if (statusEl) {
-      statusEl.textContent = 'Errore ricerca — inserisci ISBN a mano o cerca per titolo';
-      statusEl.className = 'scanner-status error';
-    }
-    // Riattiva scanner dopo errore
-    scannerActive = true;
-    if ('BarcodeDetector' in window) {
-      startNativeDetection(document.getElementById('scannerVideo'), statusEl);
-    } else if (zxingReader) {
-      startZXingDetection(document.getElementById('scannerVideo'), statusEl);
-    }
+  // Step 1b: Open Library come secondo tentativo
+  if (!searchTitle) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      const olRes = await fetch(
+        `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`,
+        { signal: controller.signal, cache: 'no-store' }
+      );
+      clearTimeout(timer);
+      if (olRes.ok) {
+        const olData = await olRes.json();
+        const book = olData[`ISBN:${isbn}`];
+        if (book && book.title) {
+          searchTitle = book.title
+            .replace(/,?\s*(vol\.?|volume|tome|band|t\.|#)\s*\d+/gi, '')
+            .replace(/\s+\d+$/, '')
+            .trim();
+        }
+      }
+    } catch (e) { console.warn('Open Library fallito:', e.message); }
   }
+
+  // Se nessuna API ha trovato nulla, apri la ricerca AniList con campo vuoto
+  if (!searchTitle) {
+    setStatus('Titolo non trovato — inserisci il titolo manualmente', 'error');
+    await new Promise(r => setTimeout(r, 1200));
+    closeScanner();
+    document.getElementById('newKindModal').classList.add('active');
+    window._isbnPrefill = null;
+    return;
+  }
+
+  setStatus(`"${searchTitle}" — apertura ricerca…`, 'found');
+  await new Promise(r => setTimeout(r, 700));
+  closeScanner();
+  document.getElementById('newKindModal').classList.add('active');
+  window._isbnPrefill = searchTitle;
 }
 
 function closeScanner() {
@@ -3686,10 +3796,7 @@ document.getElementById('customTagInput').addEventListener('keydown', (e) => {
 });
 
 // Search online
-document.getElementById('searchModalClose').addEventListener('click', () => {
-  document.getElementById('searchModal').classList.remove('active');
-  document.getElementById('seriesModal').classList.add('active');
-});
+document.getElementById('searchModalClose').addEventListener('click', closeSearchModal);
 document.getElementById('searchModalGo').addEventListener('click', () => {
   runSearch(document.getElementById('searchQueryInput').value.trim());
 });
@@ -3697,10 +3804,7 @@ document.getElementById('searchQueryInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') runSearch(e.target.value.trim());
 });
 document.getElementById('searchModal').addEventListener('click', (e) => {
-  if (e.target.id === 'searchModal') {
-    document.getElementById('searchModal').classList.remove('active');
-    document.getElementById('seriesModal').classList.add('active');
-  }
+  if (e.target.id === 'searchModal') closeSearchModal();
 });
 
 // Tabs
@@ -3738,6 +3842,33 @@ document.getElementById('recRefreshBtn').addEventListener('click', () => {
 const menuSheet = document.getElementById('menuSheet');
 document.getElementById('menuBtn').addEventListener('click', () => menuSheet.classList.add('active'));
 document.getElementById('closeMenuBtn').addEventListener('click', () => menuSheet.classList.remove('active'));
+
+document.getElementById('resetCacheBtn').addEventListener('click', async () => {
+  menuSheet.classList.remove('active');
+  const ok = await customConfirm(
+    'Reset cache',
+    'Cancella la cache del service worker e ricarica l\'app.\n\nI tuoi dati (serie e volumi) non verranno toccati.',
+    'Reset e ricarica'
+  );
+  if (!ok) return;
+  try {
+    // 1. Deregistra tutti i service worker
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    // 2. Svuota tutte le cache
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    toast('Cache svuotata — ricarico…');
+    await new Promise(r => setTimeout(r, 800));
+    window.location.reload(true);
+  } catch (err) {
+    toast('Errore reset: ' + err.message);
+  }
+});
 menuSheet.addEventListener('click', (e) => {
   if (e.target.id === 'menuSheet') menuSheet.classList.remove('active');
 });
@@ -3954,6 +4085,108 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+
+/* =========================================================================
+   PULL TO REFRESH
+   Attivo solo nella main-view, non nel dettaglio.
+   Soglia: 70px. Haptic feedback se disponibile.
+   ========================================================================= */
+
+
+
+/* =========================================================================
+   PULL-TO-REFRESH
+   Attivo solo nella main-view, non nel dettaglio.
+   Soglia: 72px di trascinamento verso il basso partendo dall'alto della pagina.
+   ========================================================================= */
+
+
+
+/* =========================================================================
+   PULL TO REFRESH
+   Trascina verso il basso dalla cima della lista per ricaricare dal DB.
+   ========================================================================= */
+
+
+
+/* =========================================================================
+   PULL TO REFRESH — trascina verso il basso per ricaricare dal DB
+   Attivo solo nella main-view, non nel dettaglio.
+   ========================================================================= */
+(function initPullToRefresh() {
+  const THRESHOLD = 68;
+  const MAX_DRAG  = 110;
+
+  let touchStartY  = 0;
+  let pulling      = false;
+  let refreshing   = false;
+
+  const el    = document.getElementById('ptrIndicator');
+  const arrow = document.getElementById('ptrArrow');
+  const lbl   = document.getElementById('ptrLabel');
+
+  function canStart() {
+    return !document.body.classList.contains('detail-open') && window.scrollY === 0;
+  }
+
+  document.addEventListener('touchstart', e => {
+    if (!canStart()) return;
+    touchStartY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling || refreshing) return;
+    const drag = Math.max(0, Math.min(e.touches[0].clientY - touchStartY, MAX_DRAG));
+    if (drag <= 0) { pulling = false; return; }
+
+    // Damping: l'indicatore appare scendendo da -100% verso 0
+    const pct = Math.min(drag / THRESHOLD, 1);
+    el.style.transform = `translateY(calc(-100% + ${drag * 0.55}px))`;
+    el.classList.add('visible');
+    el.classList.remove('loading');
+
+    if (drag >= THRESHOLD) {
+      arrow.classList.add('flipped');
+      lbl.textContent = 'Rilascia per aggiornare';
+    } else {
+      arrow.classList.remove('flipped');
+      lbl.textContent = 'Trascina per aggiornare';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', async e => {
+    if (!pulling || refreshing) return;
+    pulling = false;
+    const drag = Math.max(0, e.changedTouches[0].clientY - touchStartY);
+
+    if (drag < THRESHOLD) {
+      // Niente refresh — ritira indicatore
+      el.style.transform = '';
+      el.classList.remove('visible');
+      return;
+    }
+
+    // Avvia refresh
+    refreshing = true;
+    el.style.transform = 'translateY(0)';
+    el.classList.add('visible', 'loading');
+    lbl.textContent = 'Aggiornamento…';
+    arrow.classList.remove('flipped');
+
+    try {
+      await reloadAndRender();
+    } catch(err) { console.error(err); }
+
+    await new Promise(r => setTimeout(r, 500));
+    el.style.transform = '';
+    el.classList.remove('visible', 'loading');
+    lbl.textContent = 'Trascina per aggiornare';
+    refreshing = false;
+    touchStartY = 0;
+  });
+})();
+
 /* ---------- Init ---------- */
 loadTheme();
 loadCustomTags();
@@ -3979,13 +4212,12 @@ document.querySelectorAll('.tab').forEach(t => {
     document.body.innerHTML = '<div style="padding:40px;text-align:center">Errore database:<br>' + err.message + '</div>';
   }
 })();
-/*
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
-*/
 </script>
 </body>
 </html>
