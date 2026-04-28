@@ -1,5 +1,5 @@
-// Service Worker v1.6 — gestisce aggiornamenti su richiesta
-const CACHE = 'manga-tracker-v2';
+// Service Worker v1.8.4 — gestisce aggiornamenti su richiesta
+const CACHE = 'manga-tracker-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -8,11 +8,18 @@ const ASSETS = [
   './icon-512.png'
 ];
 
+// Domini API da NON intercettare mai (richieste POST, GraphQL, ecc.)
+const BYPASS_HOSTS = [
+  'graphql.anilist.co',
+  'openlibrary.org',
+  'fonts.googleapis.com',
+  'fonts.gstatic.com',
+];
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).catch(() => {})
   );
-  // Non fa skipWaiting automatico: aspetta il comando dall'app
 });
 
 self.addEventListener('activate', (e) => {
@@ -24,7 +31,6 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Messaggio dall'app: attiva il nuovo SW
 self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
@@ -33,19 +39,38 @@ self.addEventListener('message', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
+
+  // Lascia passare senza intercettare:
+  // - richieste POST (API GraphQL, ecc.)
+  // - domini API noti
+  // - chrome-extension e altri schemi non-http
+  if (
+    e.request.method !== 'GET' ||
+    BYPASS_HOSTS.some(h => url.hostname.includes(h)) ||
+    !url.protocol.startsWith('http')
+  ) {
+    return; // nessun respondWith → il browser gestisce normalmente
+  }
+
   if (url.origin === location.origin) {
+    // File dell'app: cache-first
     e.respondWith(
-      caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE).then((cache) => cache.put(e.request, clone));
-        return res;
-      }).catch(() => cached))
+      caches.match(e.request).then((cached) =>
+        cached || fetch(e.request).then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+          return res;
+        })
+      )
     );
   } else {
+    // Risorse esterne GET (es. immagini copertine AniList): network-first
     e.respondWith(
       fetch(e.request).then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+        }
         return res;
       }).catch(() => caches.match(e.request))
     );
