@@ -1,5 +1,5 @@
-// Service Worker v1.8.9
-const CACHE = 'manga-tracker-v5';
+// Service Worker v1.9.0
+const CACHE = 'manga-tracker-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -14,6 +14,8 @@ const BYPASS_HOSTS = [
   'googleapis.com',
   'fonts.googleapis.com',
   'fonts.gstatic.com',
+  'allorigins.win',
+  'codetabs.com',
   'corsproxy.io',
   'cors.lol',
 ];
