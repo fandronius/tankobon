@@ -2927,13 +2927,10 @@ async function anilistFetch(body) {
     try {
         const res = await fetch('https://anilist.co', {
             method: 'POST',
-            // --- AGGIUNGI QUESTE DUE RIGHE ---
-            mode: 'cors',
-            credentials: 'omit', 
-            // --------------------------------
+            mode: 'cors', // Forza esplicitamente la modalità CORS
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
+                // Abbiamo tolto 'Accept' perché a volte causa problemi di preflight
             },
             body: JSON.stringify(body),
             signal: controller.signal
@@ -2946,6 +2943,7 @@ async function anilistFetch(body) {
         throw err;
     }
 }
+
 
 
 async function searchAniList(query) {
