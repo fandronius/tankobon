@@ -27,15 +27,6 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 
 ## Changelog
 
-### v1.8.2
-- Pull-to-refresh: scorri verso il basso nella lista per aggiornare
-- Fix: la card nella lista si aggiorna in tempo reale quando modifichi i volumi nel dettaglio (senza dover chiudere e riaprire)
-
-### v1.8.1
-- Fix bug: percentuale sempre 0% nella schermata principale anche con tutti i volumi posseduti
-- Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
-- Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
-
 ### v1.8.8
 - Aggiunto pulsante \`🗑 Reset cache app\` nel menu: deregistra il service worker e svuota tutte le cache, poi ricarica (utile per risolvere problemi di connessione alle API)
 
