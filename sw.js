@@ -1,5 +1,5 @@
 // Service Worker v1.8.7
-const CACHE = 'manga-tracker-v3';
+const CACHE = 'manga-tracker-v5';
 const ASSETS = [
   './',
   './index.html',
