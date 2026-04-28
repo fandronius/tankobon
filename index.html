@@ -2889,7 +2889,7 @@ async function searchAniList(query) {
         }
       }
     }`;
-const res = await fetch('https://graphql.anilist.co', {
+const res = await fetch('https://anilist.co', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ query: gql, variables: { search: query } })
@@ -3979,12 +3979,13 @@ document.querySelectorAll('.tab').forEach(t => {
     document.body.innerHTML = '<div style="padding:40px;text-align:center">Errore database:<br>' + err.message + '</div>';
   }
 })();
-
+/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+*/
 </script>
 </body>
 </html>
