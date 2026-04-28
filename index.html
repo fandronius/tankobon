@@ -1916,7 +1916,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.9.1 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.9.2 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1938,7 +1938,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.9.1</div>
+      <div class="version-number">v1.9.2</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2050,7 +2050,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.9.1';
+const APP_VERSION = '1.9.2';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2939,49 +2939,29 @@ const LS_PREFERRED_ENDPOINT = 'mangaTracker.preferredAnilistEndpoint';
 
 const ANILIST_ENDPOINTS = [
   {
+    name: 'worker',
+    label: 'Cloudflare Worker',
+    fetch: async (body, signal) => {
+      // Worker proprio su Cloudflare: gestisce CORS perfettamente, no rate limit
+      const res = await fetch('https://tankobon.fandroleto.workers.dev', {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal,
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+  },
+  {
     name: 'direct',
     label: 'Diretto',
     fetch: async (body, signal) => {
-      // text/plain evita il preflight CORS (è "safelisted")
+      // Fallback: text/plain per evitare preflight CORS
       const res = await fetch(ANILIST_URL, {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify(body),
-        signal,
-        cache: 'no-store',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }
-  },
-  {
-    name: 'allorigins',
-    label: 'AllOrigins',
-    fetch: async (body, signal) => {
-      // AllOrigins /raw fa proxy GET, ma supporta POST se passato in body
-      // Usiamo /get che ritorna JSON wrapper con il contenuto
-      const url = 'https://api.allorigins.win/post?url=' + encodeURIComponent(ANILIST_URL);
-      const res = await fetch(url, {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify(body),
-        signal,
-        cache: 'no-store',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }
-  },
-  {
-    name: 'codetabs',
-    label: 'CodeTabs',
-    fetch: async (body, signal) => {
-      const url = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(ANILIST_URL);
-      const res = await fetch(url, {
         method: 'POST',
         mode: 'cors',
         credentials: 'omit',
@@ -3015,7 +2995,12 @@ async function _tryEndpoint(endpoint, body, timeoutMs = 12000) {
 }
 
 async function anilistFetch(body) {
-  const preferredName = localStorage.getItem(LS_PREFERRED_ENDPOINT);
+  let preferredName = localStorage.getItem(LS_PREFERRED_ENDPOINT);
+  // Se la preferenza memorizzata non esiste più tra gli endpoint correnti, pulisci
+  if (preferredName && !ANILIST_ENDPOINTS.find(e => e.name === preferredName)) {
+    localStorage.removeItem(LS_PREFERRED_ENDPOINT);
+    preferredName = null;
+  }
   const order = [];
   if (preferredName) {
     const idx = ANILIST_ENDPOINTS.findIndex(e => e.name === preferredName);

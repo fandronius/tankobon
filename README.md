@@ -36,6 +36,13 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 - Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
 - Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
 
+### v1.9.2
+- **Soluzione definitiva CORS AniList**: aggiunto Cloudflare Worker proprio (`tankobon.fandroleto.workers.dev`) come endpoint primario
+- Il Worker fa da proxy verso AniList con header CORS corretti, senza rate limit (100k req/giorno gratis su Cloudflare)
+- Mantenuta chiamata diretta come fallback nel caso il Worker fosse offline
+- Rimossi proxy pubblici inaffidabili (allorigins, codetabs) dalla lista
+- Cleanup automatico delle preferenze endpoint obsolete in localStorage
+
 ### v1.9.1
 - **Fix definitivo CORS AniList — versione corretta**: la v1.9.0 con GET tornava "Not Found" perché AniList GraphQL accetta solo POST
 - Ora usa POST con `Content-Type: text/plain` invece di `application/json`: questo è un header CORS-safelisted che evita il preflight OPTIONS senza cambiare il funzionamento di AniList (legge comunque il body come JSON)

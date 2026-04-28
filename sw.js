@@ -1,5 +1,5 @@
-// Service Worker v1.9.1
-const CACHE = 'manga-tracker-v7';
+// Service Worker v1.9.2
+const CACHE = 'manga-tracker-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -10,12 +10,11 @@ const ASSETS = [
 
 const BYPASS_HOSTS = [
   'graphql.anilist.co',
+  'workers.dev',
   'openlibrary.org',
   'googleapis.com',
   'fonts.googleapis.com',
   'fonts.gstatic.com',
-  'allorigins.win',
-  'codetabs.com',
 ];
 
 self.addEventListener('install', (e) => {
