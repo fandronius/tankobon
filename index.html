@@ -2922,27 +2922,31 @@ function handleCoverUpload(file) {
 /* ---------- AniList (ricerca serie) ---------- */
 /* Fetch AniList con timeout esplicito e no-cache per evitare interferenze SW */
 async function anilistFetch(body) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10000); // 10s timeout
-  try {
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error('AniList HTTP ' + res.status);
-    return await res.json();
-  } catch (err) {
-    clearTimeout(timer);
-    if (err.name === 'AbortError') throw new Error('Timeout — AniList non risponde');
-    throw err;
-  }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+        const res = await fetch('https://anilist.co', {
+            method: 'POST',
+            // --- AGGIUNGI QUESTE DUE RIGHE ---
+            mode: 'cors',
+            credentials: 'omit', 
+            // --------------------------------
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (!res.ok) throw new Error('AniList HTTP ' + res.status);
+        return await res.json();
+    } catch (err) {
+        clearTimeout(timer);
+        throw err;
+    }
 }
+
 
 async function searchAniList(query) {
   const gql = `
