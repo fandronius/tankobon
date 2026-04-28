@@ -1,4 +1,4 @@
-// Service Worker v1.8.4 — gestisce aggiornamenti su richiesta
+// Service Worker v1.8.7
 const CACHE = 'manga-tracker-v3';
 const ASSETS = [
   './',
@@ -8,10 +8,11 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// Domini API da NON intercettare mai (richieste POST, GraphQL, ecc.)
+// Domini API da NON intercettare mai
 const BYPASS_HOSTS = [
   'graphql.anilist.co',
   'openlibrary.org',
+  'googleapis.com',
   'fonts.googleapis.com',
   'fonts.gstatic.com',
 ];
@@ -40,20 +41,17 @@ self.addEventListener('message', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // Lascia passare senza intercettare:
-  // - richieste POST (API GraphQL, ecc.)
-  // - domini API noti
-  // - chrome-extension e altri schemi non-http
+  // Bypass: POST, API esterne, schemi non-http
   if (
     e.request.method !== 'GET' ||
     BYPASS_HOSTS.some(h => url.hostname.includes(h)) ||
     !url.protocol.startsWith('http')
   ) {
-    return; // nessun respondWith → il browser gestisce normalmente
+    return;
   }
 
   if (url.origin === location.origin) {
-    // File dell'app: cache-first
+    // File app: cache-first
     e.respondWith(
       caches.match(e.request).then((cached) =>
         cached || fetch(e.request).then((res) => {
@@ -64,7 +62,7 @@ self.addEventListener('fetch', (e) => {
       )
     );
   } else {
-    // Risorse esterne GET (es. immagini copertine AniList): network-first
+    // Risorse GET esterne (copertine ecc.): network-first
     e.respondWith(
       fetch(e.request).then((res) => {
         if (res.ok) {

@@ -1916,7 +1916,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.8.6 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.8.8 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1931,10 +1931,14 @@
       <span>📖 &nbsp;Rivedi la guida</span>
       <span class="menu-item-hint">Onboarding</span>
     </button>
+    <button class="menu-item" id="resetCacheBtn" style="color: var(--accent);">
+      <span>🗑 &nbsp;Reset cache app</span>
+      <span class="menu-item-hint">Risolve problemi di connessione</span>
+    </button>
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.8.6</div>
+      <div class="version-number">v1.8.8</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2046,7 +2050,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.8.6';
+const APP_VERSION = '1.8.8';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -3579,59 +3583,75 @@ async function handleDetectedISBN(raw, statusEl) {
 }
 
 async function lookupISBNAndOpen(isbn, statusEl) {
+  const setStatus = (msg, cls = '') => {
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.className = 'scanner-status' + (cls ? ' ' + cls : '');
+  };
+
+  setStatus('ISBN rilevato — ricerca in corso…');
+
+  let searchTitle = '';
+
+  // Step 1a: Google Books (ottima copertura manga con ISBN)
   try {
-    // Step 1: Open Library per ottenere il titolo dall'ISBN
-    const olRes = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
-    if (!olRes.ok) throw new Error('Open Library non raggiungibile');
-    const olData = await olRes.json();
-    const key = `ISBN:${isbn}`;
-    const book = olData[key];
-
-    let searchTitle = '';
-    if (book && book.title) {
-      // Pulisce il titolo: rimuove "Vol. X", "Volume X", numeri finali ecc.
-      searchTitle = book.title
-        .replace(/,?\s*(vol\.?|volume|tome|band|t\.)\s*\d+/gi, '')
-        .replace(/\s+\d+$/, '')
-        .trim();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const gbRes = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`,
+      { signal: controller.signal, cache: 'no-store' }
+    );
+    clearTimeout(timer);
+    if (gbRes.ok) {
+      const gbData = await gbRes.json();
+      const item = gbData.items && gbData.items[0];
+      if (item && item.volumeInfo && item.volumeInfo.title) {
+        searchTitle = item.volumeInfo.title
+          .replace(/,?\s*(vol\.?|volume|tome|band|t\.|#)\s*\d+/gi, '')
+          .replace(/\s+\d+$/, '')
+          .trim();
+      }
     }
+  } catch (e) { console.warn('Google Books fallito:', e.message); }
 
-    if (!searchTitle) {
-      // Fallback: isbn direttamente come query su AniList
-      searchTitle = isbn;
-    }
-
-    if (statusEl) {
-      statusEl.textContent = searchTitle !== isbn
-        ? `"${searchTitle}" trovato — cerca su AniList…`
-        : 'Cerca su AniList…';
-      statusEl.className = 'scanner-status found';
-    }
-
-    // Step 2: Chiudi scanner e apri ricerca AniList con il titolo trovato
-    await new Promise(r => setTimeout(r, 800)); // lascia leggere il messaggio
-    closeScanner();
-
-    // Apri modale scegli tipo → poi serie con titolo pre-compilato
-    document.getElementById('newKindModal').classList.add('active');
-
-    // Memorizziamo il titolo per pre-compilare quando aprono il modale
-    window._isbnPrefill = searchTitle;
-
-  } catch (err) {
-    console.error(err);
-    if (statusEl) {
-      statusEl.textContent = 'Errore ricerca — inserisci ISBN a mano o cerca per titolo';
-      statusEl.className = 'scanner-status error';
-    }
-    // Riattiva scanner dopo errore
-    scannerActive = true;
-    if ('BarcodeDetector' in window) {
-      startNativeDetection(document.getElementById('scannerVideo'), statusEl);
-    } else if (zxingReader) {
-      startZXingDetection(document.getElementById('scannerVideo'), statusEl);
-    }
+  // Step 1b: Open Library come secondo tentativo
+  if (!searchTitle) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      const olRes = await fetch(
+        `https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`,
+        { signal: controller.signal, cache: 'no-store' }
+      );
+      clearTimeout(timer);
+      if (olRes.ok) {
+        const olData = await olRes.json();
+        const book = olData[`ISBN:${isbn}`];
+        if (book && book.title) {
+          searchTitle = book.title
+            .replace(/,?\s*(vol\.?|volume|tome|band|t\.|#)\s*\d+/gi, '')
+            .replace(/\s+\d+$/, '')
+            .trim();
+        }
+      }
+    } catch (e) { console.warn('Open Library fallito:', e.message); }
   }
+
+  // Se nessuna API ha trovato nulla, apri la ricerca AniList con campo vuoto
+  if (!searchTitle) {
+    setStatus('Titolo non trovato — inserisci il titolo manualmente', 'error');
+    await new Promise(r => setTimeout(r, 1200));
+    closeScanner();
+    document.getElementById('newKindModal').classList.add('active');
+    window._isbnPrefill = null;
+    return;
+  }
+
+  setStatus(`"${searchTitle}" — apertura ricerca…`, 'found');
+  await new Promise(r => setTimeout(r, 700));
+  closeScanner();
+  document.getElementById('newKindModal').classList.add('active');
+  window._isbnPrefill = searchTitle;
 }
 
 function closeScanner() {
@@ -3803,6 +3823,33 @@ document.getElementById('recRefreshBtn').addEventListener('click', () => {
 const menuSheet = document.getElementById('menuSheet');
 document.getElementById('menuBtn').addEventListener('click', () => menuSheet.classList.add('active'));
 document.getElementById('closeMenuBtn').addEventListener('click', () => menuSheet.classList.remove('active'));
+
+document.getElementById('resetCacheBtn').addEventListener('click', async () => {
+  menuSheet.classList.remove('active');
+  const ok = await customConfirm(
+    'Reset cache',
+    'Cancella la cache del service worker e ricarica l\'app.\n\nI tuoi dati (serie e volumi) non verranno toccati.',
+    'Reset e ricarica'
+  );
+  if (!ok) return;
+  try {
+    // 1. Deregistra tutti i service worker
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    // 2. Svuota tutte le cache
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    toast('Cache svuotata — ricarico…');
+    await new Promise(r => setTimeout(r, 800));
+    window.location.reload(true);
+  } catch (err) {
+    toast('Errore reset: ' + err.message);
+  }
+});
 menuSheet.addEventListener('click', (e) => {
   if (e.target.id === 'menuSheet') menuSheet.classList.remove('active');
 });
