@@ -1916,7 +1916,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.9.3 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.9.4 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1938,7 +1938,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.9.3</div>
+      <div class="version-number">v1.9.4</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2050,7 +2050,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.9.3';
+const APP_VERSION = '1.9.4';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2943,7 +2943,7 @@ const ANILIST_ENDPOINTS = [
     label: 'Cloudflare Worker',
     fetch: async (body, signal) => {
       // Worker proprio su Cloudflare: gestisce CORS perfettamente, no rate limit
-      const res = await fetch('https://tankobon-proxy.fandroleto.workers.dev', {
+      const res = await fetch('https://anilist-proxy.fandroleto.workers.dev', {
         method: 'POST',
         mode: 'cors',
         credentials: 'omit',
