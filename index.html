@@ -1916,7 +1916,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.9.0 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.9.1 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1938,7 +1938,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.9.0</div>
+      <div class="version-number">v1.9.1</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2050,7 +2050,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2921,61 +2921,91 @@ function handleCoverUpload(file) {
 
 /* ---------- AniList (ricerca serie) ---------- */
 /*
- * Fetch AniList con cascata di endpoint:
- * 1. Diretto (se CORS funziona)
- * 2. Proxy corsproxy.io
- * 3. Proxy cors.lol
- * Una volta trovato un endpoint funzionante, viene memorizzato
- * in localStorage per evitare ritentativi inutili.
+ * AniList GraphQL fetch — strategia in cascata:
+ *
+ * 1. POST diretto con Content-Type: text/plain
+ *    → text/plain è una "safelisted header" CORS, niente preflight OPTIONS
+ *    → AniList accetta JSON anche con questo content-type
+ *
+ * 2. POST tramite proxy allorigins.win (passa attraverso il backend del proxy)
+ *
+ * 3. POST tramite proxy codetabs.com
+ *
+ * L'endpoint vincente viene memorizzato in localStorage.
  */
 
 const ANILIST_URL = 'https://graphql.anilist.co';
-const PROXY_LIST = [
-  null,                                    // diretto via GET (dovrebbe funzionare)
-  'https://api.allorigins.win/raw?url=',   // fallback 1
-  'https://api.codetabs.com/v1/proxy?quest=', // fallback 2
+const LS_PREFERRED_ENDPOINT = 'mangaTracker.preferredAnilistEndpoint';
+
+const ANILIST_ENDPOINTS = [
+  {
+    name: 'direct',
+    label: 'Diretto',
+    fetch: async (body, signal) => {
+      // text/plain evita il preflight CORS (è "safelisted")
+      const res = await fetch(ANILIST_URL, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify(body),
+        signal,
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+  },
+  {
+    name: 'allorigins',
+    label: 'AllOrigins',
+    fetch: async (body, signal) => {
+      // AllOrigins /raw fa proxy GET, ma supporta POST se passato in body
+      // Usiamo /get che ritorna JSON wrapper con il contenuto
+      const url = 'https://api.allorigins.win/post?url=' + encodeURIComponent(ANILIST_URL);
+      const res = await fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify(body),
+        signal,
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+  },
+  {
+    name: 'codetabs',
+    label: 'CodeTabs',
+    fetch: async (body, signal) => {
+      const url = 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(ANILIST_URL);
+      const res = await fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify(body),
+        signal,
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+  },
 ];
-const LS_PREFERRED_PROXY = 'mangaTracker.preferredProxyIdx';
 
-function buildAnilistUrl(proxyPrefix) {
-  if (!proxyPrefix) return ANILIST_URL;
-  return proxyPrefix + encodeURIComponent(ANILIST_URL);
-}
-
-async function _tryFetchAnilist(proxyPrefix, body, timeoutMs = 12000) {
+async function _tryEndpoint(endpoint, body, timeoutMs = 12000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  // GET con query come URL params: evita il preflight CORS richiesto da POST
-  // AniList supporta nativamente GET con i parametri ?query=...&variables=...
-  const params = new URLSearchParams();
-  if (body.query) params.set('query', body.query);
-  if (body.variables) params.set('variables', JSON.stringify(body.variables));
-  const fullUrl = buildAnilistUrl(proxyPrefix) + (proxyPrefix ? '' : '?') + (proxyPrefix ? encodeURIComponent('?' + params.toString()) : params.toString());
-
-  // Per i proxy, costruisci diversamente: la URL completa con query string deve essere encoded
-  let finalUrl;
-  if (!proxyPrefix) {
-    finalUrl = ANILIST_URL + '?' + params.toString();
-  } else {
-    finalUrl = proxyPrefix + encodeURIComponent(ANILIST_URL + '?' + params.toString());
-  }
-
   try {
-    const res = await fetch(finalUrl, {
-      method: 'GET',
-      mode: 'cors',
-      credentials: 'omit',
-      headers: { 'Accept': 'application/json' },
-      signal: controller.signal,
-      cache: 'no-store'
-    });
+    const json = await endpoint.fetch(body, controller.signal);
     clearTimeout(timer);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
     if (json.errors && json.errors.length) {
       throw new Error(json.errors[0].message || 'GraphQL error');
     }
+    if (!json.data) throw new Error('Risposta vuota');
     return json;
   } catch (err) {
     clearTimeout(timer);
@@ -2985,33 +3015,33 @@ async function _tryFetchAnilist(proxyPrefix, body, timeoutMs = 12000) {
 }
 
 async function anilistFetch(body) {
-  // Prova prima l'endpoint preferito (memorizzato da una sessione precedente)
-  const preferredIdx = parseInt(localStorage.getItem(LS_PREFERRED_PROXY) || '0', 10);
+  const preferredName = localStorage.getItem(LS_PREFERRED_ENDPOINT);
   const order = [];
-  if (preferredIdx >= 0 && preferredIdx < PROXY_LIST.length) order.push(preferredIdx);
-  for (let i = 0; i < PROXY_LIST.length; i++) {
-    if (i !== preferredIdx) order.push(i);
+  if (preferredName) {
+    const idx = ANILIST_ENDPOINTS.findIndex(e => e.name === preferredName);
+    if (idx >= 0) order.push(idx);
+  }
+  for (let i = 0; i < ANILIST_ENDPOINTS.length; i++) {
+    if (!order.includes(i)) order.push(i);
   }
 
   let lastErr = null;
   for (const idx of order) {
+    const ep = ANILIST_ENDPOINTS[idx];
     try {
-      const result = await _tryFetchAnilist(PROXY_LIST[idx], body);
-      // Successo: memorizza per le prossime chiamate
-      if (idx !== preferredIdx) {
-        localStorage.setItem(LS_PREFERRED_PROXY, String(idx));
-        console.log('[AniList] Endpoint funzionante:', idx === 0 ? 'diretto' : PROXY_LIST[idx]);
+      const result = await _tryEndpoint(ep, body);
+      if (ep.name !== preferredName) {
+        localStorage.setItem(LS_PREFERRED_ENDPOINT, ep.name);
+        console.log('[AniList] Endpoint funzionante:', ep.label);
       }
       return result;
     } catch (err) {
       lastErr = err;
-      console.warn('[AniList] Endpoint', idx, 'fallito:', err.message);
-      // Continua col prossimo
+      console.warn('[AniList]', ep.label, 'fallito:', err.message);
     }
   }
-  // Tutti hanno fallito: resetta preferenza per la prossima sessione
-  localStorage.removeItem(LS_PREFERRED_PROXY);
-  throw lastErr || new Error('Tutti gli endpoint AniList non rispondono');
+  localStorage.removeItem(LS_PREFERRED_ENDPOINT);
+  throw lastErr || new Error('Nessun endpoint AniList raggiungibile');
 }
 
 async function searchAniList(query) {

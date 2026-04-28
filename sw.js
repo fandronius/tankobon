@@ -1,5 +1,5 @@
-// Service Worker v1.9.0
-const CACHE = 'manga-tracker-v6';
+// Service Worker v1.9.1
+const CACHE = 'manga-tracker-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -16,8 +16,6 @@ const BYPASS_HOSTS = [
   'fonts.gstatic.com',
   'allorigins.win',
   'codetabs.com',
-  'corsproxy.io',
-  'cors.lol',
 ];
 
 self.addEventListener('install', (e) => {
@@ -43,7 +41,6 @@ self.addEventListener('message', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-
   if (
     e.request.method !== 'GET' ||
     BYPASS_HOSTS.some(h => url.hostname.includes(h)) ||
@@ -51,7 +48,6 @@ self.addEventListener('fetch', (e) => {
   ) {
     return;
   }
-
   if (url.origin === location.origin) {
     e.respondWith(
       caches.match(e.request).then((cached) =>

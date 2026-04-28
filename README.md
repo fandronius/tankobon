@@ -36,6 +36,12 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 - Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
 - Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
 
+### v1.9.1
+- **Fix definitivo CORS AniList — versione corretta**: la v1.9.0 con GET tornava "Not Found" perché AniList GraphQL accetta solo POST
+- Ora usa POST con `Content-Type: text/plain` invece di `application/json`: questo è un header CORS-safelisted che evita il preflight OPTIONS senza cambiare il funzionamento di AniList (legge comunque il body come JSON)
+- Cambiati i proxy fallback: `allorigins.win/post` e `codetabs.com/v1/proxy`
+- Sistema di endpoint riorganizzato in array con label leggibili e log su console
+
 ### v1.9.0
 - **Fix definitivo CORS AniList**: convertite tutte le chiamate da POST a GET con query string. Le richieste GET non richiedono il preflight CORS (OPTIONS) che AniList ha smesso di gestire correttamente, quindi ora funzionano in modo nativo dal browser senza bisogno di proxy
 - Sostituiti i proxy non più funzionanti (corsproxy.io a 403, cors.lol bloccato): ora usa allorigins.win e codetabs.com come fallback se la chiamata diretta dovesse fallire
