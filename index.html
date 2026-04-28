@@ -2890,7 +2890,7 @@ async function searchAniList(query) {
       }
     }`;
 const res = await fetch('https://anilist.co', {
-    method: 'POST',
+  method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ query: gql, variables: { search: query } })
   });
