@@ -44,7 +44,7 @@ self.addEventListener('fetch', (e) => {
   // Bypass: POST, API esterne, schemi non-http
   if (
     e.request.method !== 'GET' ||
-    BYPASS_HOSTS.some(h => url.hostname.includes(h)) ||
+    BYPASS_HOSTS.some(h => url.href.includes(h)) ||
     !url.protocol.startsWith('http')
   ) {
     return;
