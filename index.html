@@ -1876,7 +1876,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.8 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.8.1 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1894,7 +1894,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.8</div>
+      <div class="version-number">v1.8.1</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2006,7 +2006,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.8.1';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2108,9 +2108,11 @@ function computeStats(series) {
   const owned = series.volumes.filter(v => v.owned).length;
   const total = series.volumes.length;
   const next = series.volumes.find(v => !v.owned);
-  const percent = series.ongoing
-    ? (owned > 0 ? 100 : 0)
-    : (total === 0 ? 0 : Math.round((owned / total) * 100));
+  // Per serie ongoing: se tutti i volumi tracciati sono posseduti → 100%,
+  // altrimenti percentuale reale. Se non ci sono volumi → 0%.
+  const percent = total === 0
+    ? 0
+    : Math.round((owned / total) * 100);
   return {
     owned, total, percent,
     next: next ? next.n : null,
@@ -2781,9 +2783,9 @@ async function toggleWishlist() {
   if (!s) return;
   if (s.kind === 'wishlist') {
     s.kind = 'collection';
-    s.ongoing = true;
+    s.ongoing = false;
     if (!Array.isArray(s.volumes)) s.volumes = [];
-    toast('Spostata in collezione');
+    toast('Spostata in collezione — modifica per aggiungere i volumi');
   } else {
     const owned = s.volumes.filter(v => v.owned).length;
     if (owned > 0) {
