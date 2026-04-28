@@ -15,7 +15,7 @@
 
 <style>
   /* =====================================================
-     TANKŌBON v1.6 — Redesign pulito e moderno
+     TANKŌBON v1.5 — Redesign pulito e moderno
      Palette: bianco/grigi, accent corallo vivo
      Tipografia: DM Sans (principale) + DM Serif (display)
      ===================================================== */
@@ -1306,6 +1306,117 @@
     opacity: 0.8;
   }
 
+
+  /* ====== ONBOARDING ====== */
+  .onboarding-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,15,20,0.6);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+  .onboarding-backdrop.active { display: flex; }
+
+  .onboarding-sheet {
+    background: var(--surface);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 0 0 calc(20px + env(safe-area-inset-bottom));
+    animation: sheetSlide 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+  }
+
+  .onboarding-slides {
+    display: flex;
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .onboarding-slide {
+    min-width: 100%;
+    padding: 32px 28px 20px;
+  }
+
+  .onboarding-emoji {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    line-height: 1;
+  }
+
+  .onboarding-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    letter-spacing: -0.4px;
+    margin-bottom: 10px;
+    color: var(--ink);
+    line-height: 1.15;
+  }
+
+  .onboarding-body {
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .onboarding-body strong { color: var(--ink); font-weight: 600; }
+
+  .onboarding-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px 0;
+    gap: 12px;
+  }
+
+  .onboarding-dots {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+  }
+  .onboarding-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--line);
+    transition: all 0.2s;
+  }
+  .onboarding-dot.active {
+    background: var(--accent);
+    width: 18px;
+    border-radius: 3px;
+  }
+
+  .onboarding-btn-skip {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 4px;
+    flex-shrink: 0;
+  }
+  .onboarding-btn-next {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    padding: 11px 22px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    transition: transform 0.08s, opacity 0.15s;
+  }
+  .onboarding-btn-next:active { transform: scale(0.96); }
+
   input[type="file"] { display: none; }
 
   /* ====== SCANNER ISBN ====== */
@@ -1759,6 +1870,11 @@
     <h4>Dati</h4>
     <button class="menu-item" id="exportBtn">↓ &nbsp;Esporta tutto (JSON)</button>
     <button class="menu-item" id="importBtn">↑ &nbsp;Importa da JSON</button>
+    <h4>Aiuto</h4>
+    <button class="menu-item" id="showGuideBtn">
+      <span>📖 &nbsp;Rivedi la guida</span>
+      <span class="menu-item-hint">Onboarding</span>
+    </button>
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
@@ -1792,6 +1908,68 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+
+<!-- ================== ONBOARDING ================== -->
+<div class="onboarding-backdrop" id="onboardingBackdrop">
+  <div class="onboarding-sheet">
+    <div class="onboarding-slides" id="onboardingSlides">
+
+      <div class="onboarding-slide">
+        <span class="onboarding-emoji">巻</span>
+        <div class="onboarding-title">Benvenuto in Tankōbon</div>
+        <div class="onboarding-body">
+          La tua collezione di manga, sempre con te.<br><br>
+          <strong>Nessun account, nessun abbonamento.</strong><br>
+          Tutto gira sul tuo telefono, anche offline.
+        </div>
+      </div>
+
+      <div class="onboarding-slide">
+        <span class="onboarding-emoji">📚</span>
+        <div class="onboarding-title">Collezione & Wishlist</div>
+        <div class="onboarding-body">
+          Tieni traccia dei volumi che <strong>possiedi</strong> e di quelli che <strong>vuoi comprare</strong>.<br><br>
+          Tocca un volume per segnarlo come posseduto. Tocca di nuovo per rimuoverlo — ti verrà chiesta conferma.
+        </div>
+      </div>
+
+      <div class="onboarding-slide">
+        <span class="onboarding-emoji">▦</span>
+        <div class="onboarding-title">Aggiungi con la fotocamera</div>
+        <div class="onboarding-body">
+          Tocca <strong>+</strong> e poi <strong>Scansiona ISBN</strong> per inquadrare il codice a barre di un manga.<br><br>
+          L'app cerca automaticamente su AniList: copertina, autore e generi già compilati.
+        </div>
+      </div>
+
+      <div class="onboarding-slide">
+        <span class="onboarding-emoji">⭐</span>
+        <div class="onboarding-title">Consigliati per te</div>
+        <div class="onboarding-body">
+          Nella <strong>Wishlist</strong> trovi una sezione con manga consigliati in base alla tua collezione.<br><br>
+          Tocca una copertina per aggiungerla subito alla tua wishlist.
+        </div>
+      </div>
+
+      <div class="onboarding-slide">
+        <span class="onboarding-emoji">🎉</span>
+        <div class="onboarding-title">Tutto pronto!</div>
+        <div class="onboarding-body">
+          Tocca <strong>+</strong> per aggiungere la tua prima serie.<br><br>
+          Puoi esportare i tuoi dati come JSON dal menu <strong>☰</strong> in qualsiasi momento — così non li perdi mai.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="onboarding-footer">
+      <button class="onboarding-btn-skip" id="onboardingSkip">Salta</button>
+      <div class="onboarding-dots" id="onboardingDots"></div>
+      <button class="onboarding-btn-next" id="onboardingNext">Avanti →</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* =========================================================================
@@ -2334,6 +2512,14 @@ async function toggleVolume(n) {
   if (!s) return;
   const vol = s.volumes.find(v => v.n === n);
   if (!vol) return;
+  if (vol.owned) {
+    const ok = await customConfirm(
+      'Rimuovi volume',
+      `Segnare il volume #${n} come non posseduto?`,
+      'Rimuovi'
+    );
+    if (!ok) return;
+  }
   vol.owned = !vol.owned;
   await saveSeries(s);
   const idx = seriesCache.findIndex(x => x.id === s.id);
@@ -2895,7 +3081,14 @@ async function fetchPersonalRecommendations(seedTitles) {
       }
     }`;
   const recsMap = new Map(); // id → {media, count}
-  const seenOwnTitles = new Set(seedTitles.map(t => t.toLowerCase()));
+  // Costruisci set di titoli da escludere: tutte le serie (collezione + wishlist)
+  const allOwnedTitles = new Set(
+    seriesCache.flatMap(s => [s.name, s.name.toLowerCase()])
+  );
+  const seenOwnTitles = new Set([
+    ...seedTitles.map(t => t.toLowerCase()),
+    ...Array.from(allOwnedTitles).map(t => t.toLowerCase())
+  ]);
 
   for (const title of seeds) {
     try {
@@ -2948,8 +3141,20 @@ async function loadRecommendations(forceRefresh = false) {
       if (cachedRaw) {
         const cached = JSON.parse(cachedRaw);
         if (cached && cached.ts && (Date.now() - cached.ts < REC_CACHE_TTL_MS)) {
-          renderRecommendations(cached.items, cached.mode);
-          return;
+          // Rifiltra i cached escludendo serie aggiunte da allora
+          const currentTitles = new Set(
+            seriesCache.map(s => s.name.toLowerCase())
+          );
+          const filtered = (cached.items || []).filter(m => {
+            const titles = [m.title.english, m.title.romaji, m.title.native]
+              .filter(Boolean).map(t => t.toLowerCase());
+            return !titles.some(t => currentTitles.has(t));
+          });
+          if (filtered.length > 0) {
+            renderRecommendations(filtered, cached.mode);
+            return;
+          }
+          // Se dopo il filtro non rimane niente, ricarica
         }
       }
     } catch {}
@@ -3141,6 +3346,8 @@ async function importData(file) {
 async function reloadAndRender() {
   const raw = await getAllSeries();
   seriesCache = raw.map(normalize);
+  // Invalida cache consigliati: la collezione è cambiata
+  localStorage.removeItem(LS_REC_CACHE);
   renderSeriesList();
   renderTagFilterBar();
   if (currentSeriesId) renderDetail();
@@ -3524,6 +3731,14 @@ document.getElementById('shareAppBtn').addEventListener('click', async () => {
     fallbackCopy(appUrl);
   }
 });
+document.getElementById('showGuideBtn').addEventListener('click', () => {
+  menuSheet.classList.remove('active');
+  localStorage.removeItem(LS_ONBOARDING);
+  onboardingCurrent = 0;
+  renderOnboardingDots();
+  goToOnboardingSlide(0);
+  document.getElementById('onboardingBackdrop').classList.add('active');
+});
 document.getElementById('exportBtn').addEventListener('click', () => { menuSheet.classList.remove('active'); exportData(); });
 document.getElementById('importBtn').addEventListener('click', () => { menuSheet.classList.remove('active'); document.getElementById('importFile').click(); });
 document.getElementById('importFile').addEventListener('change', (e) => {
@@ -3536,6 +3751,69 @@ document.getElementById('importFile').addEventListener('change', (e) => {
     if (e.key === 'Enter') saveFromModal();
   });
 });
+
+
+/* =========================================================================
+   ONBOARDING — appare solo al primo avvio
+   ========================================================================= */
+const LS_ONBOARDING = 'mangaTracker.onboardingDone';
+const ONBOARDING_SLIDES = 5;
+let onboardingCurrent = 0;
+
+function renderOnboardingDots() {
+  const dots = document.getElementById('onboardingDots');
+  dots.innerHTML = Array.from({ length: ONBOARDING_SLIDES }, (_, i) =>
+    `<div class="onboarding-dot ${i === onboardingCurrent ? 'active' : ''}"></div>`
+  ).join('');
+}
+
+function goToOnboardingSlide(idx) {
+  onboardingCurrent = idx;
+  const slides = document.getElementById('onboardingSlides');
+  slides.style.transform = `translateX(-${idx * 100}%)`;
+  renderOnboardingDots();
+  const nextBtn = document.getElementById('onboardingNext');
+  nextBtn.textContent = idx === ONBOARDING_SLIDES - 1 ? 'Inizia 🎉' : 'Avanti →';
+}
+
+function closeOnboarding() {
+  localStorage.setItem(LS_ONBOARDING, '1');
+  document.getElementById('onboardingBackdrop').classList.remove('active');
+}
+
+function maybeShowOnboarding() {
+  if (!localStorage.getItem(LS_ONBOARDING)) {
+    onboardingCurrent = 0;
+    renderOnboardingDots();
+    goToOnboardingSlide(0);
+    document.getElementById('onboardingBackdrop').classList.add('active');
+  }
+}
+
+document.getElementById('onboardingNext').addEventListener('click', () => {
+  if (onboardingCurrent < ONBOARDING_SLIDES - 1) {
+    goToOnboardingSlide(onboardingCurrent + 1);
+  } else {
+    closeOnboarding();
+  }
+});
+document.getElementById('onboardingSkip').addEventListener('click', closeOnboarding);
+
+// Swipe touch per scorrere le slide
+(function () {
+  const sheet = document.querySelector('.onboarding-sheet');
+  let startX = 0;
+  sheet.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  sheet.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) < 40) return;
+    if (dx < 0 && onboardingCurrent < ONBOARDING_SLIDES - 1) {
+      goToOnboardingSlide(onboardingCurrent + 1);
+    } else if (dx > 0 && onboardingCurrent > 0) {
+      goToOnboardingSlide(onboardingCurrent - 1);
+    }
+  }, { passive: true });
+})();
 
 /* ---------- Init ---------- */
 loadTheme();
@@ -3557,6 +3835,7 @@ document.querySelectorAll('.tab').forEach(t => {
     db = await openDB();
     await reloadAndRender();
     setTab(currentTab);
+    maybeShowOnboarding();
   } catch (err) {
     document.body.innerHTML = '<div style="padding:40px;text-align:center">Errore database:<br>' + err.message + '</div>';
   }
