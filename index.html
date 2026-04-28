@@ -1353,6 +1353,107 @@
   }
   .ptr-arrow.flipped { transform: rotate(180deg); }
 
+  /* ====== ONBOARDING ====== */
+  .onboarding-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,15,20,0.6);
+    backdrop-filter: blur(6px);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .onboarding-backdrop.active { display: flex; }
+
+  .onboarding-sheet {
+    background: var(--surface);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    width: 100%;
+    max-width: 480px;
+    padding: 0 0 calc(20px + env(safe-area-inset-bottom));
+    animation: sheetSlide 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow: hidden;
+  }
+  .onboarding-slides {
+    display: flex;
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .onboarding-slide {
+    min-width: 100%;
+    padding: 32px 28px 20px;
+  }
+  .onboarding-emoji {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    line-height: 1;
+  }
+  .onboarding-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    letter-spacing: -0.4px;
+    margin-bottom: 10px;
+    color: var(--ink);
+    line-height: 1.15;
+  }
+  .onboarding-body {
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .onboarding-body strong { color: var(--ink); font-weight: 600; }
+  .onboarding-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px 0;
+    gap: 12px;
+  }
+  .onboarding-dots {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    justify-content: center;
+  }
+  .onboarding-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--line);
+    transition: all 0.2s;
+  }
+  .onboarding-dot.active {
+    background: var(--accent);
+    width: 18px;
+    border-radius: 3px;
+  }
+  .onboarding-btn-skip {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 4px;
+    flex-shrink: 0;
+  }
+  .onboarding-btn-next {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    padding: 11px 22px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+    transition: transform 0.08s;
+  }
+  .onboarding-btn-next:active { transform: scale(0.96); }
+
   /* ====== SCANNER ISBN ====== */
   .scanner-backdrop {
     display: none;
@@ -1815,7 +1916,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.8.2 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.8.4 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1833,7 +1934,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.8.2</div>
+      <div class="version-number">v1.8.4</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -1945,7 +2046,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.8.2';
+const APP_VERSION = '1.8.4';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2841,8 +2942,14 @@ async function searchAniList(query) {
   return (data.data && data.data.Page && data.data.Page.media) || [];
 }
 
+let _searchOpenedFromSeriesModal = false;
+
 function openSearchModal() {
-  document.getElementById('seriesModal').classList.remove('active');
+  const seriesModalOpen = document.getElementById('seriesModal').classList.contains('active');
+  _searchOpenedFromSeriesModal = seriesModalOpen;
+  if (seriesModalOpen) {
+    document.getElementById('seriesModal').classList.remove('active');
+  }
   const q = document.getElementById('seriesNameInput').value.trim();
   document.getElementById('searchQueryInput').value = q;
   document.getElementById('searchResults').style.display = 'none';
@@ -2851,6 +2958,14 @@ function openSearchModal() {
   document.getElementById('searchModal').classList.add('active');
   if (q) runSearch(q);
   else setTimeout(() => document.getElementById('searchQueryInput').focus(), 50);
+}
+
+function closeSearchModal() {
+  document.getElementById('searchModal').classList.remove('active');
+  if (_searchOpenedFromSeriesModal) {
+    document.getElementById('seriesModal').classList.add('active');
+  }
+  _searchOpenedFromSeriesModal = false;
 }
 
 let lastSearchItems = [];
@@ -2971,8 +3086,7 @@ async function pickSearchResult(item) {
     }
   }
 
-  document.getElementById('searchModal').classList.remove('active');
-  document.getElementById('seriesModal').classList.add('active');
+  closeSearchModal();
   renderTagEditor();
 
   if (coverUrl) {
@@ -3628,10 +3742,7 @@ document.getElementById('customTagInput').addEventListener('keydown', (e) => {
 });
 
 // Search online
-document.getElementById('searchModalClose').addEventListener('click', () => {
-  document.getElementById('searchModal').classList.remove('active');
-  document.getElementById('seriesModal').classList.add('active');
-});
+document.getElementById('searchModalClose').addEventListener('click', closeSearchModal);
 document.getElementById('searchModalGo').addEventListener('click', () => {
   runSearch(document.getElementById('searchQueryInput').value.trim());
 });
@@ -3639,10 +3750,7 @@ document.getElementById('searchQueryInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') runSearch(e.target.value.trim());
 });
 document.getElementById('searchModal').addEventListener('click', (e) => {
-  if (e.target.id === 'searchModal') {
-    document.getElementById('searchModal').classList.remove('active');
-    document.getElementById('seriesModal').classList.add('active');
-  }
+  if (e.target.id === 'searchModal') closeSearchModal();
 });
 
 // Tabs
