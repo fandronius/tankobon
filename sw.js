@@ -1,5 +1,5 @@
-// Service Worker v1.8.7
-const CACHE = 'manga-tracker-v6';
+// Service Worker v1.8.9
+const CACHE = 'manga-tracker-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -8,13 +8,14 @@ const ASSETS = [
   './icon-512.png'
 ];
 
-// Domini API da NON intercettare mai
 const BYPASS_HOSTS = [
   'graphql.anilist.co',
   'openlibrary.org',
   'googleapis.com',
   'fonts.googleapis.com',
   'fonts.gstatic.com',
+  'corsproxy.io',
+  'cors.lol',
 ];
 
 self.addEventListener('install', (e) => {
@@ -41,7 +42,6 @@ self.addEventListener('message', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // Bypass: POST, API esterne, schemi non-http
   if (
     e.request.method !== 'GET' ||
     BYPASS_HOSTS.some(h => url.hostname.includes(h)) ||
@@ -51,7 +51,6 @@ self.addEventListener('fetch', (e) => {
   }
 
   if (url.origin === location.origin) {
-    // File app: cache-first
     e.respondWith(
       caches.match(e.request).then((cached) =>
         cached || fetch(e.request).then((res) => {
@@ -62,7 +61,6 @@ self.addEventListener('fetch', (e) => {
       )
     );
   } else {
-    // Risorse GET esterne (copertine ecc.): network-first
     e.respondWith(
       fetch(e.request).then((res) => {
         if (res.ok) {

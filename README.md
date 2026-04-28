@@ -36,6 +36,12 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 - Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
 - Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
 
+### v1.8.9
+- Fix definitivo "Failed to fetch" AniList: aggiunto sistema di proxy CORS in cascata
+- Tenta prima la chiamata diretta, poi fallback automatico su corsproxy.io e cors.lol
+- L'endpoint funzionante viene memorizzato in localStorage per evitare ritentativi
+- Aggiunti domini proxy al bypass del service worker
+
 ### v1.8.8
 - Aggiunto pulsante \`🗑 Reset cache app\` nel menu: deregistra il service worker e svuota tutte le cache, poi ricarica (utile per risolvere problemi di connessione alle API)
 

@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#ffffff" />
 <title>Tankōbon — Manga Tracker</title>
-  
-  <div id="status"></div>
-  
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-192.png" />
@@ -1919,7 +1916,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.8.8 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.8.9 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1941,7 +1938,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.8.8</div>
+      <div class="version-number">v1.8.9</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2053,7 +2050,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.8.8';
+const APP_VERSION = '1.8.9';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2923,42 +2920,86 @@ function handleCoverUpload(file) {
 }
 
 /* ---------- AniList (ricerca serie) ---------- */
-/* Fetch AniList con timeout esplicito e no-cache per evitare interferenze SW */
-async function anilistFetch(body) {
-  const status = document.getElementById('status');
+/*
+ * Fetch AniList con cascata di endpoint:
+ * 1. Diretto (se CORS funziona)
+ * 2. Proxy corsproxy.io
+ * 3. Proxy cors.lol
+ * Una volta trovato un endpoint funzionante, viene memorizzato
+ * in localStorage per evitare ritentativi inutili.
+ */
 
+const ANILIST_URL = 'https://graphql.anilist.co';
+const PROXY_LIST = [
+  null,  // diretto
+  'https://corsproxy.io/?url=',
+  'https://cors.lol/?url=',
+];
+const LS_PREFERRED_PROXY = 'mangaTracker.preferredProxyIdx';
+
+function buildAnilistUrl(proxyPrefix) {
+  if (!proxyPrefix) return ANILIST_URL;
+  return proxyPrefix + encodeURIComponent(ANILIST_URL);
+}
+
+async function _tryFetchAnilist(proxyPrefix, body, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch('https://tankobon.fandroleto.workers.dev/')
+    const res = await fetch(buildAnilistUrl(proxyPrefix), {
       method: 'POST',
       mode: 'cors',
       credentials: 'omit',
-      cache: 'no-store',
-      redirect: 'follow',
-      referrerPolicy: 'no-referrer',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: controller.signal,
+      cache: 'no-store'
     });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
+    clearTimeout(timer);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-
-    if (json.errors?.length) {
-      throw new Error(json.errors[0].message);
+    if (json.errors && json.errors.length) {
+      throw new Error(json.errors[0].message || 'GraphQL error');
     }
-
     return json;
-
   } catch (err) {
-    console.error(err);
-    status.textContent = `Errore AniList: ${err.message}`;
+    clearTimeout(timer);
+    if (err.name === 'AbortError') throw new Error('Timeout');
     throw err;
   }
+}
+
+async function anilistFetch(body) {
+  // Prova prima l'endpoint preferito (memorizzato da una sessione precedente)
+  const preferredIdx = parseInt(localStorage.getItem(LS_PREFERRED_PROXY) || '0', 10);
+  const order = [];
+  if (preferredIdx >= 0 && preferredIdx < PROXY_LIST.length) order.push(preferredIdx);
+  for (let i = 0; i < PROXY_LIST.length; i++) {
+    if (i !== preferredIdx) order.push(i);
+  }
+
+  let lastErr = null;
+  for (const idx of order) {
+    try {
+      const result = await _tryFetchAnilist(PROXY_LIST[idx], body);
+      // Successo: memorizza per le prossime chiamate
+      if (idx !== preferredIdx) {
+        localStorage.setItem(LS_PREFERRED_PROXY, String(idx));
+        console.log('[AniList] Endpoint funzionante:', idx === 0 ? 'diretto' : PROXY_LIST[idx]);
+      }
+      return result;
+    } catch (err) {
+      lastErr = err;
+      console.warn('[AniList] Endpoint', idx, 'fallito:', err.message);
+      // Continua col prossimo
+    }
+  }
+  // Tutti hanno fallito: resetta preferenza per la prossima sessione
+  localStorage.removeItem(LS_PREFERRED_PROXY);
+  throw lastErr || new Error('Tutti gli endpoint AniList non rispondono');
 }
 
 async function searchAniList(query) {
