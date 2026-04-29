@@ -1785,7 +1785,10 @@
   </section>
 
   <section class="plot-section" id="plotSection">
-    <div class="section-label"><span>Trama</span></div>
+    <div class="section-label">
+      <span>Trama</span>
+      <button class="text-btn" id="translatePlotBtn" style="display:none;font-size:12px;padding:4px 10px">🌐 Traduci</button>
+    </div>
     <div class="plot-text" id="plotText"></div>
   </section>
 </div>
@@ -1944,7 +1947,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.10.0 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.10.2 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1966,7 +1969,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.10.0</div>
+      <div class="version-number">v1.10.2</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2078,7 +2081,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.10.2';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2562,6 +2565,9 @@ function renderDetail() {
   const volSection = document.getElementById('volumesSection');
   const progressWrap = document.getElementById('detailProgressWrap');
 
+  // Render plot (sempre, sia per collezione che wishlist)
+  renderPlotSection(s);
+
   if (isWishlist) {
     statsEl.style.display = 'none';
     volSection.style.display = 'none';
@@ -2606,20 +2612,25 @@ function renderDetail() {
   });
   const addBtn = document.getElementById('addVolBtn');
   if (addBtn) addBtn.addEventListener('click', addNextVolume);
+}
 
-  // Render plot
+function renderPlotSection(s) {
   const plotSection = document.getElementById('plotSection');
   const plotText = document.getElementById('plotText');
-  if (plotSection && plotText) {
-    if (s.plot && s.plot.trim()) {
-      plotText.textContent = s.plot;
-      plotText.classList.remove('empty');
-    } else {
-      plotText.textContent = 'Nessuna trama. Modifica la serie per aggiungerla, oppure usa "Cerca online" per scaricarla automaticamente.';
-      plotText.classList.add('empty');
-    }
-    plotSection.style.display = '';
+  const translateBtn = document.getElementById('translatePlotBtn');
+  if (!plotSection || !plotText) return;
+
+  if (s.plot && s.plot.trim()) {
+    plotText.textContent = s.plot;
+    plotText.classList.remove('empty');
+    const looksEnglish = /\b(the|and|of|in|to|with|that|his|her|this|when|after)\b/i.test(s.plot);
+    if (translateBtn) translateBtn.style.display = looksEnglish ? '' : 'none';
+  } else {
+    plotText.textContent = 'Nessuna trama. Modifica la serie per aggiungerla, oppure usa "Cerca online" per scaricarla automaticamente.';
+    plotText.classList.add('empty');
+    if (translateBtn) translateBtn.style.display = 'none';
   }
+  plotSection.style.display = '';
 }
 
 async function toggleVolume(n) {
@@ -3004,6 +3015,49 @@ async function jikanThrottle() {
   _lastJikanCall = Date.now();
 }
 
+/* ---------- Traduzione automatica EN → IT (Google Translate pubblico) ---------- */
+async function translateToItalian(text) {
+  if (!text || !text.trim()) return text;
+
+  // Google Translate ha un limite ~5000 char per richiesta
+  // Per testi lunghi, dividi in chunk per frasi e traduci sequenzialmente
+  const chunks = [];
+  const MAX_CHUNK = 2000;
+  let remaining = text;
+  while (remaining.length > 0) {
+    if (remaining.length <= MAX_CHUNK) {
+      chunks.push(remaining);
+      break;
+    }
+    // Cerca punto di taglio naturale (fine frase) entro i primi MAX_CHUNK
+    let cutPoint = remaining.lastIndexOf('. ', MAX_CHUNK);
+    if (cutPoint < MAX_CHUNK / 2) cutPoint = remaining.lastIndexOf(' ', MAX_CHUNK);
+    if (cutPoint < 0) cutPoint = MAX_CHUNK;
+    chunks.push(remaining.slice(0, cutPoint + 1));
+    remaining = remaining.slice(cutPoint + 1);
+  }
+
+  const translated = [];
+  for (const chunk of chunks) {
+    try {
+      const url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=it&dt=t&q=' + encodeURIComponent(chunk);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      // Risposta: [[[ "tradotto", "originale", null, null, ... ], ...], ...]
+      const segments = (data[0] || []).map(s => s[0]).filter(Boolean);
+      translated.push(segments.join(''));
+    } catch (err) {
+      console.warn('Translate fallita:', err.message);
+      translated.push(chunk); // fallback al testo originale
+    }
+  }
+  return translated.join('').trim();
+}
+
 async function searchAniList(query) {
   // Manteniamo il nome searchAniList per compatibilità ma usiamo Jikan
   await jikanThrottle();
@@ -3172,9 +3226,22 @@ async function pickSearchResult(item) {
     document.getElementById('seriesAuthorInput').value = authorName;
   }
   if (item.synopsis) {
+    // Mostra subito l'inglese, poi sostituisci con la traduzione
     pendingPlot = item.synopsis;
     const plotEl = document.getElementById('seriesPlotInput');
-    if (plotEl) plotEl.value = item.synopsis;
+    if (plotEl) {
+      plotEl.value = item.synopsis;
+      plotEl.placeholder = 'Traduzione in corso…';
+    }
+    // Traduci in background
+    translateToItalian(item.synopsis).then(translated => {
+      pendingPlot = translated;
+      const el = document.getElementById('seriesPlotInput');
+      if (el) {
+        el.value = translated;
+        el.placeholder = 'Breve descrizione della serie…';
+      }
+    }).catch(() => {});
   }
   if (!document.getElementById('ongoingCheckbox').checked &&
       item.volumes && !document.getElementById('seriesTotalInput').value) {
@@ -3923,6 +3990,28 @@ menuSheet.addEventListener('click', (e) => {
 });
 
 document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+
+document.getElementById('translatePlotBtn').addEventListener('click', async () => {
+  const s = seriesCache.find(x => x.id === currentSeriesId);
+  if (!s || !s.plot) return;
+  const btn = document.getElementById('translatePlotBtn');
+  const plotText = document.getElementById('plotText');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Traduzione…';
+  try {
+    const translated = await translateToItalian(s.plot);
+    s.plot = translated;
+    await saveSeries(s);
+    plotText.textContent = translated;
+    btn.style.display = 'none';
+    toast('Tradotto in italiano');
+  } catch (err) {
+    btn.textContent = original;
+    btn.disabled = false;
+    toast('Traduzione non riuscita');
+  }
+});
 
 // Verifica aggiornamenti
 document.getElementById('checkUpdateBtn').addEventListener('click', async () => {
