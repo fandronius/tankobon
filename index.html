@@ -2050,7 +2050,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.11.6 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.7 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -2080,7 +2080,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.11.6</div>
+      <div class="version-number">v1.11.7</div>
       <div class="version-author">
         di <a href="mailto:fandroleto@gmail.com?subject=Tankōbon%20-%20Suggerimenti" style="color:var(--accent);text-decoration:none;font-weight:600">Fandronius</a>
       </div>
@@ -2148,15 +2148,6 @@
       </div>
 
       <div class="onboarding-slide">
-        <span class="onboarding-emoji">▦</span>
-        <div class="onboarding-title">Aggiungi con la fotocamera</div>
-        <div class="onboarding-body">
-          Tocca <strong>+</strong> e poi <strong>Scansiona ISBN</strong> per inquadrare il codice a barre di un manga.<br><br>
-          L'app cerca automaticamente online: copertina, autore e generi già compilati.
-        </div>
-      </div>
-
-      <div class="onboarding-slide">
         <span class="onboarding-emoji">⭐</span>
         <div class="onboarding-title">Consigliati per te</div>
         <div class="onboarding-body">
@@ -2194,7 +2185,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.11.6';
+const APP_VERSION = '1.11.7';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -4337,7 +4328,7 @@ document.getElementById('importFile').addEventListener('change', (e) => {
    ONBOARDING — appare solo al primo avvio
    ========================================================================= */
 const LS_ONBOARDING = 'mangaTracker.onboardingDone';
-const ONBOARDING_SLIDES = 5;
+const ONBOARDING_SLIDES = 4;
 let onboardingCurrent = 0;
 
 function renderOnboardingDots() {
@@ -4754,7 +4745,10 @@ function closeTopModal() {
   return true;
 }
 
+let _exitingApp = false;
+
 window.addEventListener('popstate', (e) => {
+  if (_exitingApp) return; // sta uscendo, non interferire
   // Se c'è un modale aperto, chiudilo (consuma il back)
   if (closeTopModal()) {
     history.pushState({ tankobon: 'main' }, '');
@@ -4781,12 +4775,18 @@ document.getElementById('exitModalCancel').addEventListener('click', () => {
   document.getElementById('exitModal').classList.remove('active');
 });
 document.getElementById('exitModalConfirm').addEventListener('click', () => {
-  // Chiude la finestra (funziona solo per PWA installate o in alcuni browser)
-  // In un browser normale, semplicemente lascia che il prossimo back porti fuori dalla cronologia
   document.getElementById('exitModal').classList.remove('active');
-  // Rimuove tutti gli state pushed e fa back finchè esce
-  history.go(-(history.length));
-  window.close();
+  _exitingApp = true;
+  // Va indietro fino a uscire dalla cronologia
+  history.back();
+  setTimeout(() => {
+    try { window.close(); } catch {}
+    // Se ancora aperti dopo 200ms, ripristina lo stato (siamo in browser normale)
+    _exitingApp = false;
+    if (!history.state || !history.state.tankobon) {
+      history.replaceState({ tankobon: 'main' }, '');
+    }
+  }, 200);
 });
 
 /* ---------- Init ---------- */
