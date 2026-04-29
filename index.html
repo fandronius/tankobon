@@ -1374,6 +1374,54 @@
   }
   .ptr-arrow.flipped { transform: rotate(180deg); }
 
+  /* ====== COFFEE BUTTON (donation) ====== */
+  .coffee-btn {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    margin: 12px 0 8px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #FFF1EA 0%, #FFE0D0 100%);
+    border: 1px solid rgba(255, 90, 60, 0.25);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--ink);
+    transition: transform 0.08s, box-shadow 0.15s;
+    box-sizing: border-box;
+  }
+  .coffee-btn:active {
+    transform: scale(0.99);
+    box-shadow: 0 1px 3px rgba(255, 90, 60, 0.15) inset;
+  }
+  .coffee-emoji {
+    font-size: 24px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .coffee-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+  .coffee-text strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+  .coffee-sub {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    opacity: 0.85;
+  }
+  body.dark .coffee-btn {
+    background: linear-gradient(135deg, rgba(255, 90, 60, 0.15) 0%, rgba(255, 90, 60, 0.08) 100%);
+    border-color: rgba(255, 90, 60, 0.3);
+  }
+
   /* ====== ONBOARDING ====== */
   .onboarding-backdrop {
     display: none;
@@ -1969,7 +2017,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.11.0 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.1 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1988,11 +2036,21 @@
       <span>🗑 &nbsp;Reset cache app</span>
       <span class="menu-item-hint">Risolve problemi di connessione</span>
     </button>
+    <a class="coffee-btn" href="https://paypal.me/AlexLeto86" target="_blank" rel="noopener">
+      <span class="coffee-emoji">☕</span>
+      <span class="coffee-text">
+        <strong>Offrimi un caffè</strong>
+        <span class="coffee-sub">Tankōbon è gratis. Se ti piace e la trovi utile, supportala con una piccola donazione. Grazie!</span>
+      </span>
+    </a>
+
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.11.0</div>
-      <div class="version-author">di <span>Fandronius</span></div>
+      <div class="version-number">v1.11.1</div>
+      <div class="version-author">
+        di <a href="mailto:fandroleto@gmail.com?subject=Tankōbon%20-%20Suggerimenti" style="color:var(--accent);text-decoration:none;font-weight:600">Fandronius</a>
+      </div>
       <div style="margin-top:10px">
         <a id="readmeLink"
            href="https://fandronius.github.io/tankobon/README.md"
@@ -2103,7 +2161,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.11.1';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
