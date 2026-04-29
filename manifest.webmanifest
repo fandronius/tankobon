@@ -2,7 +2,7 @@
   "name": "Tankōbon Manga Tracker",
   "short_name": "Tankōbon",
   "description": "Traccia la tua collezione di manga: volumi posseduti, mancanti e prossimi da comprare.",
-  "version": "1.10.2",
+  "version": "1.10.3",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

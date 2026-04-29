@@ -1947,7 +1947,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.10.2 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.10.3 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1969,7 +1969,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.10.2</div>
+      <div class="version-number">v1.10.3</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2081,7 +2081,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.10.2';
+const APP_VERSION = '1.10.3';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2131,6 +2131,7 @@ let editingSeriesId = null;
 let pendingCover = null;
 let pendingTags = [];        // tag in fase di editing
 let pendingPlot = '';        // plot/sinossi della serie
+let pendingTotalVolumes = null; // numero volumi suggerito (da Jikan o input utente)
 let currentSort = 'name';
 let currentTab = 'collection';
 let currentQuery = '';
@@ -2726,6 +2727,7 @@ function openAddModal() {
   pendingCover = null;
   pendingTags = [];
   pendingPlot = '';
+  pendingTotalVolumes = null;
   const plotInput = document.getElementById('seriesPlotInput');
   if (plotInput) plotInput.value = '';
   document.getElementById('modalTitle').textContent = newKind === 'wishlist' ? 'Nuova in Wishlist' : 'Nuova Serie';
@@ -2753,6 +2755,7 @@ function openEditModal() {
   editingSeriesId = s.id;
   pendingCover = s.cover || null;
   pendingPlot = s.plot || '';
+  pendingTotalVolumes = s.totalVolumes || null;
   const plotInputEdit = document.getElementById('seriesPlotInput');
   if (plotInputEdit) plotInputEdit.value = pendingPlot;
   pendingTags = [...(s.tags || [])];
@@ -2796,6 +2799,8 @@ async function saveFromModal() {
       s.author = author;
       s.cover = pendingCover || null;
       s.tags = [...pendingTags];
+      s.plot = pendingPlot || '';
+      if (pendingTotalVolumes) s.totalVolumes = pendingTotalVolumes;
       await saveSeries(s);
       toast('Wishlist aggiornata');
     } else {
@@ -2806,6 +2811,7 @@ async function saveFromModal() {
         cover: pendingCover || null,
         tags: [...pendingTags],
         plot: pendingPlot || '',
+        totalVolumes: pendingTotalVolumes || null,
         createdAt: Date.now(),
         ongoing: false,
         volumes: []
@@ -2828,6 +2834,7 @@ async function saveFromModal() {
     s.cover = pendingCover || null;
     s.tags = [...pendingTags];
     s.plot = pendingPlot || '';
+    if (pendingTotalVolumes) s.totalVolumes = pendingTotalVolumes;
     s.ongoing = ongoing;
 
     if (!ongoing) {
@@ -2852,6 +2859,7 @@ async function saveFromModal() {
       cover: pendingCover || null,
       tags: [...pendingTags],
       plot: pendingPlot || '',
+      totalVolumes: pendingTotalVolumes || null,
       createdAt: Date.now(),
       ongoing,
       volumes: []
@@ -2897,7 +2905,15 @@ async function toggleWishlist() {
     s.kind = 'collection';
     s.ongoing = false;
     if (!Array.isArray(s.volumes)) s.volumes = [];
-    toast('Spostata in collezione — modifica per aggiungere i volumi');
+    // Se ha un numero di volumi memorizzato, ricrea la griglia (tutti non posseduti)
+    if (s.totalVolumes && s.totalVolumes > 0 && s.volumes.length === 0) {
+      for (let i = 1; i <= s.totalVolumes; i++) {
+        s.volumes.push({ n: i, owned: false });
+      }
+      toast(`Spostata in collezione (${s.totalVolumes} volumi pronti)`);
+    } else {
+      toast('Spostata in collezione — modifica per aggiungere i volumi');
+    }
   } else {
     const owned = s.volumes.filter(v => v.owned).length;
     if (owned > 0) {
@@ -2906,6 +2922,10 @@ async function toggleWishlist() {
         `Spostare "${s.name}" in wishlist?\n\nI volumi posseduti (${owned}) verranno dimenticati.`,
         'Sposta'
       ))) return;
+    }
+    // Salva il numero di volumi attuale come "memoria" prima di svuotare
+    if (s.volumes && s.volumes.length > 0) {
+      s.totalVolumes = s.volumes.length;
     }
     s.kind = 'wishlist';
     s.ongoing = false;
@@ -2924,20 +2944,8 @@ async function shareCurrentSeries() {
   const s = seriesCache.find(x => x.id === currentSeriesId);
   if (!s) return;
 
-  let text;
-  if (s.kind === 'wishlist') {
-    text = `📚 ${s.name}${s.author ? ' — ' + s.author : ''}\n★ Nella mia wishlist\n\n— via Tankōbon Tracker`;
-  } else {
-    const st = computeStats(s);
-    const parts = [`📚 ${s.name}`];
-    if (s.author) parts[0] += ` — ${s.author}`;
-    if (st.ongoing) parts.push(`Posseduti: ${st.owned} vol. (serie in corso)`);
-    else            parts.push(`Posseduti: ${st.owned}/${st.total} (${st.percent}%)`);
-    if (st.next !== null) parts.push(`Prossimo: #${st.next}`);
-    else if (!st.ongoing) parts.push(`✓ Serie completa`);
-    parts.push(`\n— via Tankōbon Tracker`);
-    text = parts.join('\n');
-  }
+  const titleLine = `${s.name}${s.author ? ' — ' + s.author : ''}`;
+  const text = `Ciao, guarda questa serie, credo ti piacerà molto!\n\n📚 ${titleLine}\n\nScarica Tankōbon e aggiungila alla tua wishlist:\nhttps://fandronius.github.io/tankobon/`;
 
   if (navigator.share) {
     try { await navigator.share({ title: s.name, text }); }
@@ -3224,6 +3232,9 @@ async function pickSearchResult(item) {
   if (title) document.getElementById('seriesNameInput').value = title;
   if (authorName && !document.getElementById('seriesAuthorInput').value.trim()) {
     document.getElementById('seriesAuthorInput').value = authorName;
+  }
+  if (item.volumes) {
+    pendingTotalVolumes = item.volumes;
   }
   if (item.synopsis) {
     // Mostra subito l'inglese, poi sostituisci con la traduzione
