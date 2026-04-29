@@ -1335,6 +1335,26 @@
     text-align: center;
   }
 
+  .search-mode-btn {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink-soft);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .search-mode-btn:hover { border-color: var(--accent); }
+  .search-mode-btn.active {
+    background: var(--ink);
+    color: var(--surface);
+    border-color: var(--ink);
+  }
+
   /* ====== PULL TO REFRESH ====== */
   .ptr-indicator {
     position: fixed;
@@ -1918,7 +1938,15 @@
     <div class="modal-sub">Compila automaticamente nome, autore, copertina e tag</div>
 
     <div class="form-row">
-      <label for="searchQueryInput">Titolo da cercare</label>
+      <label>Cerca per</label>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button type="button" class="search-mode-btn active" data-mode="title">Titolo</button>
+        <button type="button" class="search-mode-btn" data-mode="author">Autore</button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label for="searchQueryInput" id="searchQueryLabel">Titolo da cercare</label>
       <input type="text" id="searchQueryInput" placeholder="Es. Bleach" />
     </div>
 
@@ -2010,7 +2038,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.11.2 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.3 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -2040,7 +2068,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.11.2</div>
+      <div class="version-number">v1.11.3</div>
       <div class="version-author">
         di <a href="mailto:fandroleto@gmail.com?subject=Tankōbon%20-%20Suggerimenti" style="color:var(--accent);text-decoration:none;font-weight:600">Fandronius</a>
       </div>
@@ -2154,7 +2182,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.11.2';
+const APP_VERSION = '1.11.3';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -3145,12 +3173,65 @@ async function translateToItalian(text) {
   return translated.join('').trim();
 }
 
-async function searchAniList(query) {
+async function searchAniList(query, mode = 'title') {
   // Manteniamo il nome searchAniList per compatibilità ma usiamo Jikan
+  // mode: 'title' (default) o 'author'
   await jikanThrottle();
-  const data = await jikanFetch('/manga?q=' + encodeURIComponent(query) + '&limit=10&order_by=popularity&sort=asc');
+  let url;
+  if (mode === 'author') {
+    // Endpoint dedicato: prima cerca persone, poi prendi i loro manga
+    const peopleData = await jikanFetch('/people?q=' + encodeURIComponent(query) + '&limit=3');
+    const people = (peopleData.data || []).slice(0, 3);
+    if (people.length === 0) return [];
+    // Per ogni autore prendi i manga che ha pubblicato
+    const allManga = [];
+    for (const person of people) {
+      try {
+        await jikanThrottle();
+        const personFull = await jikanFetch('/people/' + person.mal_id + '/full');
+        const mangaList = (personFull.data && personFull.data.manga) || [];
+        for (const item of mangaList) {
+          if (item.manga && item.manga.mal_id) {
+            // Salva insieme posizione (title-only data)
+            allManga.push({ mal_id: item.manga.mal_id, basic: item.manga, position: item.position });
+          }
+        }
+      } catch (e) { console.warn('Author fetch fallito:', e.message); }
+    }
+    // Per ottenere dati completi (synopsis, generi) dovremmo fare /manga/{id} ma è troppo costoso
+    // Limitiamoci ai dati base disponibili
+    const seen = new Set();
+    const list = [];
+    for (const m of allManga) {
+      if (seen.has(m.mal_id)) continue;
+      seen.add(m.mal_id);
+      list.push({
+        mal_id: m.mal_id,
+        title: m.basic.title,
+        title_english: '',
+        title_japanese: '',
+        images: m.basic.images || {},
+        volumes: null,
+        genres: [],
+        themes: [],
+        authors: [],
+        synopsis: '',
+        score: null,
+        status: '',
+        type: 'Manga',
+        _authorPosition: m.position || '',
+      });
+      if (list.length >= 15) break;
+    }
+    return _adaptJikanList(list);
+  }
+  // Default: ricerca per titolo, niente sort esplicito (Jikan usa relevance per default)
+  const data = await jikanFetch('/manga?q=' + encodeURIComponent(query) + '&limit=15');
   const list = data.data || [];
-  // Adatta il formato Jikan al formato già usato dal codice (compatibile con AniList shape)
+  return _adaptJikanList(list);
+}
+
+function _adaptJikanList(list) {
   return list.map(m => ({
     id: m.mal_id,
     title: {
@@ -3216,7 +3297,7 @@ async function runSearch(query) {
   status.textContent = 'Ricerca in corso…';
   results.style.display = 'none';
   try {
-    const items = await searchAniList(query);
+    const items = await searchAniList(query, currentSearchMode);
     lastSearchItems = items;
     if (items.length === 0) { status.textContent = 'Nessun risultato'; return; }
     results.innerHTML = items.map((m, idx) => {
@@ -4531,6 +4612,27 @@ async function handleDeepLink() {
   document.getElementById('inviteCancel').onclick = () => modal.classList.remove('active');
   modal.onclick = (e) => { if (e.target.id === 'inviteModal') modal.classList.remove('active'); };
 }
+
+
+/* Toggle modalità ricerca: titolo o autore */
+let currentSearchMode = 'title';
+document.querySelectorAll('.search-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.search-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSearchMode = btn.dataset.mode;
+    const input = document.getElementById('searchQueryInput');
+    const label = document.getElementById('searchQueryLabel');
+    if (currentSearchMode === 'author') {
+      label.textContent = 'Autore da cercare';
+      input.placeholder = 'Es. Tite Kubo';
+    } else {
+      label.textContent = 'Titolo da cercare';
+      input.placeholder = 'Es. Bleach';
+    }
+    input.focus();
+  });
+});
 
 /* ---------- Init ---------- */
 loadTheme();
