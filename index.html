@@ -2010,7 +2010,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.11.3 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.2 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -2040,7 +2040,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.11.3</div>
+      <div class="version-number">v1.11.2</div>
       <div class="version-author">
         di <a href="mailto:fandroleto@gmail.com?subject=Tankōbon%20-%20Suggerimenti" style="color:var(--accent);text-decoration:none;font-weight:600">Fandronius</a>
       </div>
@@ -2125,7 +2125,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.11.3';
+const APP_VERSION = '1.11.2';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -4391,35 +4391,6 @@ if ('serviceWorker' in navigator) {
    DEEP LINK — apertura da link condiviso (?add=Title&author=...)
    Mostra modale che propone di aggiungere alla wishlist
    ========================================================================= */
-/* Normalizza un titolo per il matching: lowercase, rimuove punteggiatura,
-   articoli, edizioni, parentesi, sottotitoli dopo i due punti. */
-function normalizeTitleForMatch(t) {
-  if (!t) return '';
-  return t
-    .toLowerCase()
-    .replace(/\(.*?\)/g, '')               // rimuove parentesi
-    .replace(/\[.*?\]/g, '')               // rimuove quadre
-    .replace(/[:：].*$/, '')                  // taglia dopo ":"
-    .replace(/\b(deluxe|edition|complete|collector|original|new|the|il|la|le|lo|gli|i|un|una)\b/g, '')
-    .replace(/[^a-z0-9\u4e00-\u9fff]/g, '') // tiene solo alfanumerici e CJK
-    .trim();
-}
-
-/* Cerca una serie già in cache che corrisponde a uno dei titoli forniti */
-function findExistingSeries(...candidateTitles) {
-  const normalized = candidateTitles
-    .filter(Boolean)
-    .map(normalizeTitleForMatch)
-    .filter(t => t.length > 1);
-  if (normalized.length === 0) return null;
-  for (const s of seriesCache) {
-    const sNorm = normalizeTitleForMatch(s.name);
-    if (!sNorm) continue;
-    if (normalized.some(n => n === sNorm)) return s;
-  }
-  return null;
-}
-
 async function handleDeepLink() {
   const params = new URLSearchParams(window.location.search);
   const addTitle = params.get('add');
@@ -4430,47 +4401,8 @@ async function handleDeepLink() {
 
   const author = params.get('author') || '';
 
-  /* Funzione che mostra il modale "già in lista" e termina il flusso */
-  function showAlreadyInListModal(existing) {
-    const modal = document.getElementById('inviteModal');
-    const inCollection = existing.kind !== 'wishlist';
-    document.getElementById('inviteTitle').textContent = existing.name;
-    document.getElementById('inviteAuthor').textContent = existing.author || '';
-    document.getElementById('invitePlot').textContent = existing.plot || '';
-    if (existing.cover) {
-      document.getElementById('inviteCover').style.backgroundImage = `url('${existing.cover}')`;
-    } else {
-      document.getElementById('inviteCover').style.backgroundImage = '';
-    }
-    document.getElementById('inviteModalSub').innerHTML = inCollection
-      ? '✓ <strong>Hai già questa serie nella tua collezione</strong>'
-      : '⭐ <strong>Hai già questa serie nella tua wishlist</strong>';
-
-    const addBtn = document.getElementById('inviteAdd');
-    const cancelBtn = document.getElementById('inviteCancel');
-    addBtn.textContent = 'Apri scheda';
-    cancelBtn.textContent = 'Chiudi';
-
-    addBtn.onclick = () => {
-      modal.classList.remove('active');
-      openDetail(existing.id);
-    };
-    cancelBtn.onclick = () => modal.classList.remove('active');
-    modal.onclick = (e) => { if (e.target.id === 'inviteModal') modal.classList.remove('active'); };
-    modal.classList.add('active');
-  }
-
-  // Check 1: titolo URL già presente?
-  const existingByUrl = findExistingSeries(addTitle);
-  if (existingByUrl) {
-    showAlreadyInListModal(existingByUrl);
-    return;
-  }
-
-  // Mostra modale base mentre cerchiamo dati arricchiti
+  // Mostra subito il modale con i dati base
   const modal = document.getElementById('inviteModal');
-  document.getElementById('inviteAdd').textContent = 'Aggiungi alla wishlist';
-  document.getElementById('inviteCancel').textContent = 'Non ora';
   document.getElementById('inviteTitle').textContent = addTitle;
   document.getElementById('inviteAuthor').textContent = author || '';
   document.getElementById('invitePlot').textContent = '';
@@ -4493,20 +4425,6 @@ async function handleDeepLink() {
     const match = results[0];
     if (match) {
       const matchTitle = match.title.english || match.title.romaji || addTitle;
-
-      // Check 2: il titolo arricchito o le sue varianti corrispondono a una serie esistente?
-      const existingByMatch = findExistingSeries(
-        matchTitle,
-        match.title.english,
-        match.title.romaji,
-        match.title.native,
-        addTitle
-      );
-      if (existingByMatch) {
-        showAlreadyInListModal(existingByMatch);
-        return;
-      }
-
       enrichedData.name = matchTitle;
       // Autore (se non già fornito)
       if (!enrichedData.author && match.staff && match.staff.edges && match.staff.edges[0]) {
@@ -4549,10 +4467,11 @@ async function handleDeepLink() {
 
   // Salva in chiusura
   document.getElementById('inviteAdd').onclick = async () => {
-    // Ultimo check anti-duplicato (es. se è stata aggiunta nel frattempo)
-    const existing = findExistingSeries(enrichedData.name);
+    // Verifica se esiste già una serie con stesso nome
+    const existing = seriesCache.find(s => s.name.toLowerCase() === enrichedData.name.toLowerCase());
     if (existing) {
-      showAlreadyInListModal(existing);
+      modal.classList.remove('active');
+      toast('Già in lista');
       return;
     }
     // Se cover è URL esterno, prova a convertirlo in dataURL

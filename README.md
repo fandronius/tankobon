@@ -29,12 +29,6 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 
 ## Changelog
 
-### v1.11.3 — Anti-doppione condivisione
-- Fix: se un amico condivide una serie che già hai in collezione **o** in wishlist, l'app non crea più un duplicato
-- Aggiunto matching robusto dei titoli: normalizza lowercase, rimuove punteggiatura, articoli, edizioni, sottotitoli dopo i due punti
-- Il check viene fatto in 3 momenti: (1) all'apertura del link col titolo URL, (2) dopo l'arricchimento Jikan confrontando tutti i titoli alternativi (English, Romaji, Native), (3) al click finale "Aggiungi"
-- Nuovo modale: se la serie esiste già, mostra messaggio "Hai già questa serie nella tua **collezione/wishlist**" con la copertina e i dati salvati, e il bottone "Apri scheda" per andare direttamente al dettaglio
-
 ### v1.11.2 — Rimozione scansione ISBN
 - Rimossa la funzione di scansione ISBN: la copertura dei database manga (Google Books, Open Library) era troppo scarsa, specie per le edizioni italiane, e produceva risultati inutili nel 90% dei casi
 - Rimossa anche la slide dedicata nell'onboarding (ridotto da 5 a 4 slide)
