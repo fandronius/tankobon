@@ -12,7 +12,6 @@
 - 🏷️ Tag e generi per ogni serie (18 preset + custom)
 - 🔍 Ricerca dati ufficiali via Jikan/MyAnimeList (copertina, autore, plot, generi, numero volumi)
 - 📖 Trama in italiano (traduzione automatica del synopsis EN)
-- ▦ Scansione ISBN tramite fotocamera
 - ⭐ Consigliati personalizzati in base alla tua collezione
 - 📊 Progressione volumi con barra grafica
 - 🔗 Condivisione con deep-link: gli amici aprono il link e l'app propone l'aggiunta diretta alla loro wishlist
@@ -29,6 +28,11 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 ---
 
 ## Changelog
+
+### v1.11.2 — Rimozione scansione ISBN
+- Rimossa la funzione di scansione ISBN: la copertura dei database manga (Google Books, Open Library) era troppo scarsa, specie per le edizioni italiane, e produceva risultati inutili nel 90% dei casi
+- Rimossa anche la slide dedicata nell'onboarding (ridotto da 5 a 4 slide)
+- La ricerca tramite "Cerca online" rimane il modo più affidabile per importare dati su una serie
 
 ### v1.11.1 — Donazioni e contatti
 - Aggiunto bottone "Offrimi un caffè" nel menu ☰: link a PayPal con messaggio di ringraziamento, design discreto ma in evidenza con sfondo corallo sfumato
