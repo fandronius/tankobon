@@ -1922,6 +1922,28 @@
   </div>
 </div>
 
+<!-- ================== MODALE INVITO (deep-link) ================== -->
+<div class="modal-backdrop" id="inviteModal">
+  <div class="modal">
+    <h3>Un amico ti consiglia una serie</h3>
+    <div class="modal-sub" id="inviteModalSub">Caricamento dati…</div>
+
+    <div id="inviteModalPreview" style="display:flex;gap:14px;align-items:flex-start;margin:16px 0;padding:14px;background:var(--bg);border-radius:var(--radius-md);border:1px solid var(--line);">
+      <div id="inviteCover" style="width:70px;height:100px;border-radius:6px;background:var(--line);flex-shrink:0;background-size:cover;background-position:center;"></div>
+      <div style="flex:1;min-width:0">
+        <div id="inviteTitle" style="font-family:'DM Serif Display',serif;font-size:18px;line-height:1.2;color:var(--ink);margin-bottom:4px"></div>
+        <div id="inviteAuthor" style="font-size:13px;color:var(--ink-soft);margin-bottom:6px"></div>
+        <div id="invitePlot" style="font-size:12px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <div class="modal-buttons">
+      <button class="btn" id="inviteCancel">Non ora</button>
+      <button class="btn btn-primary" id="inviteAdd">Aggiungi alla wishlist</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================== MODALE AGGIORNAMENTO ================== -->
 <div class="modal-backdrop" id="updateModal">
   <div class="modal">
@@ -1947,7 +1969,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.10.3 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.0 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1969,7 +1991,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.10.3</div>
+      <div class="version-number">v1.11.0</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2081,7 +2103,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.10.3';
+const APP_VERSION = '1.11.0';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2945,7 +2967,13 @@ async function shareCurrentSeries() {
   if (!s) return;
 
   const titleLine = `${s.name}${s.author ? ' — ' + s.author : ''}`;
-  const text = `Ciao, guarda questa serie, credo ti piacerà molto!\n\n📚 ${titleLine}\n\nScarica Tankōbon e aggiungila alla tua wishlist:\nhttps://fandronius.github.io/tankobon/`;
+  // Deep link: l'amico aprendo il link vede subito la proposta di aggiunta
+  const params = new URLSearchParams();
+  params.set('add', s.name);
+  if (s.author) params.set('author', s.author);
+  const deepLink = `https://fandronius.github.io/tankobon/?${params.toString()}`;
+
+  const text = `Ciao, guarda questa serie, credo ti piacerà molto!\n\n📚 ${titleLine}\n\nApri questo link per aggiungerla direttamente alla tua wishlist su Tankōbon:\n${deepLink}`;
 
   if (navigator.share) {
     try { await navigator.share({ title: s.name, text }); }
@@ -4336,6 +4364,123 @@ if ('serviceWorker' in navigator) {
   });
 })();
 
+
+/* =========================================================================
+   DEEP LINK — apertura da link condiviso (?add=Title&author=...)
+   Mostra modale che propone di aggiungere alla wishlist
+   ========================================================================= */
+async function handleDeepLink() {
+  const params = new URLSearchParams(window.location.search);
+  const addTitle = params.get('add');
+  if (!addTitle) return;
+
+  // Pulisci la URL per non riproporre alla prossima apertura
+  history.replaceState({}, '', window.location.pathname);
+
+  const author = params.get('author') || '';
+
+  // Mostra subito il modale con i dati base
+  const modal = document.getElementById('inviteModal');
+  document.getElementById('inviteTitle').textContent = addTitle;
+  document.getElementById('inviteAuthor').textContent = author || '';
+  document.getElementById('invitePlot').textContent = '';
+  document.getElementById('inviteCover').style.backgroundImage = '';
+  document.getElementById('inviteModalSub').textContent = 'Cerca dati…';
+  modal.classList.add('active');
+
+  // Cerca su Jikan per recuperare copertina, plot, generi
+  let enrichedData = {
+    name: addTitle,
+    author,
+    cover: null,
+    plot: '',
+    tags: [],
+    totalVolumes: null,
+  };
+
+  try {
+    const results = await searchAniList(addTitle);
+    const match = results[0];
+    if (match) {
+      const matchTitle = match.title.english || match.title.romaji || addTitle;
+      enrichedData.name = matchTitle;
+      // Autore (se non già fornito)
+      if (!enrichedData.author && match.staff && match.staff.edges && match.staff.edges[0]) {
+        enrichedData.author = match.staff.edges[0].node.name.full;
+      }
+      enrichedData.cover = (match.coverImage && (match.coverImage.large || match.coverImage.medium)) || null;
+      enrichedData.plot = match.synopsis || '';
+      enrichedData.totalVolumes = match.volumes || null;
+      if (Array.isArray(match.genres)) {
+        for (const genre of match.genres) {
+          const tagId = mapAniListGenreToTag(genre);
+          if (tagId && !enrichedData.tags.includes(tagId)) {
+            enrichedData.tags.push(tagId);
+          }
+        }
+      }
+
+      // Aggiorna preview
+      document.getElementById('inviteTitle').textContent = enrichedData.name;
+      document.getElementById('inviteAuthor').textContent = enrichedData.author || '';
+      if (enrichedData.cover) {
+        document.getElementById('inviteCover').style.backgroundImage = `url('${enrichedData.cover}')`;
+      }
+      if (enrichedData.plot) {
+        document.getElementById('invitePlot').textContent = enrichedData.plot;
+        // Traduci in background
+        translateToItalian(enrichedData.plot).then(translated => {
+          enrichedData.plot = translated;
+          document.getElementById('invitePlot').textContent = translated;
+        }).catch(() => {});
+      }
+      document.getElementById('inviteModalSub').textContent = 'Vuoi aggiungerla alla tua wishlist?';
+    } else {
+      document.getElementById('inviteModalSub').textContent = 'Vuoi aggiungerla alla tua wishlist?';
+    }
+  } catch (err) {
+    console.warn('Deep-link search failed:', err.message);
+    document.getElementById('inviteModalSub').textContent = 'Vuoi aggiungerla alla tua wishlist?';
+  }
+
+  // Salva in chiusura
+  document.getElementById('inviteAdd').onclick = async () => {
+    // Verifica se esiste già una serie con stesso nome
+    const existing = seriesCache.find(s => s.name.toLowerCase() === enrichedData.name.toLowerCase());
+    if (existing) {
+      modal.classList.remove('active');
+      toast('Già in lista');
+      return;
+    }
+    // Se cover è URL esterno, prova a convertirlo in dataURL
+    let coverFinal = null;
+    if (enrichedData.cover) {
+      try { coverFinal = await fetchImageAsDataURL(enrichedData.cover); }
+      catch { coverFinal = enrichedData.cover; }
+    }
+    const newSeries = {
+      id: uid(),
+      kind: 'wishlist',
+      name: enrichedData.name,
+      author: enrichedData.author || '',
+      cover: coverFinal,
+      tags: enrichedData.tags,
+      plot: enrichedData.plot,
+      totalVolumes: enrichedData.totalVolumes,
+      createdAt: Date.now(),
+      ongoing: false,
+      volumes: [],
+    };
+    await saveSeries(newSeries);
+    modal.classList.remove('active');
+    await reloadAndRender();
+    setTab('wishlist');
+    toast('Aggiunta alla wishlist');
+  };
+  document.getElementById('inviteCancel').onclick = () => modal.classList.remove('active');
+  modal.onclick = (e) => { if (e.target.id === 'inviteModal') modal.classList.remove('active'); };
+}
+
 /* ---------- Init ---------- */
 loadTheme();
 loadCustomTags();
@@ -4356,7 +4501,27 @@ document.querySelectorAll('.tab').forEach(t => {
     db = await openDB();
     await reloadAndRender();
     setTab(currentTab);
-    maybeShowOnboarding();
+    // Deep link ha priorità sull'onboarding: se c'è ?add=, mostra subito il modale
+    const hasDeepLink = !!new URLSearchParams(window.location.search).get('add');
+    if (hasDeepLink) {
+      // Se è il primo avvio mostra l'onboarding rapidamente, poi il deep-link
+      if (!localStorage.getItem(LS_ONBOARDING)) {
+        maybeShowOnboarding();
+        // attendi che l'onboarding venga chiuso
+        const waitClose = () => new Promise(resolve => {
+          const check = setInterval(() => {
+            if (!document.getElementById('onboardingBackdrop').classList.contains('active')) {
+              clearInterval(check);
+              resolve();
+            }
+          }, 300);
+        });
+        await waitClose();
+      }
+      handleDeepLink();
+    } else {
+      maybeShowOnboarding();
+    }
   } catch (err) {
     document.body.innerHTML = '<div style="padding:40px;text-align:center">Errore database:<br>' + err.message + '</div>';
   }
