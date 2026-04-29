@@ -2013,6 +2013,18 @@
   </div>
 </div>
 
+<!-- ================== MODALE USCITA ================== -->
+<div class="modal-backdrop" id="exitModal">
+  <div class="modal">
+    <h3>Uscire dall'app?</h3>
+    <div class="modal-sub">Vuoi davvero chiudere Tankōbon?</div>
+    <div class="modal-buttons">
+      <button class="btn" id="exitModalCancel">Resta nell'app</button>
+      <button class="btn btn-primary" id="exitModalConfirm">Esci</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================== MODALE AGGIORNAMENTO ================== -->
 <div class="modal-backdrop" id="updateModal">
   <div class="modal">
@@ -2038,7 +2050,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.11.3 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.4 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -2068,7 +2080,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.11.3</div>
+      <div class="version-number">v1.11.4</div>
       <div class="version-author">
         di <a href="mailto:fandroleto@gmail.com?subject=Tankōbon%20-%20Suggerimenti" style="color:var(--accent);text-decoration:none;font-weight:600">Fandronius</a>
       </div>
@@ -2182,7 +2194,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.11.3';
+const APP_VERSION = '1.11.4';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2629,6 +2641,8 @@ function openDetail(id) {
   document.body.classList.add('detail-open');
   document.getElementById('detailView').classList.add('active');
   window.scrollTo(0, 0);
+  // Push state per intercettare il tasto indietro
+  history.pushState({ tankobon: 'detail', id }, '');
 }
 function closeDetail() {
   currentSeriesId = null;
@@ -4634,6 +4648,61 @@ document.querySelectorAll('.search-mode-btn').forEach(btn => {
   });
 });
 
+
+/* =========================================================================
+   GESTIONE TASTO INDIETRO
+   - Dal dettaglio → torna alla home
+   - Da modale aperto → chiudi modale
+   - Dalla home → mostra "Uscire dall'app?"
+   ========================================================================= */
+
+function getOpenModal() {
+  const modals = document.querySelectorAll('.modal-backdrop.active, .scanner-backdrop.active, .menu-sheet.active, .onboarding-backdrop.active');
+  return modals.length > 0 ? modals[modals.length - 1] : null;
+}
+
+function closeTopModal() {
+  const m = getOpenModal();
+  if (!m) return false;
+  m.classList.remove('active');
+  return true;
+}
+
+window.addEventListener('popstate', (e) => {
+  // Se c'è un modale aperto, chiudilo (consuma il back)
+  if (closeTopModal()) {
+    history.pushState({ tankobon: 'main' }, '');
+    return;
+  }
+  // Se siamo nel dettaglio, chiudilo
+  if (document.body.classList.contains('detail-open')) {
+    closeDetail();
+    history.pushState({ tankobon: 'main' }, '');
+    return;
+  }
+  // Altrimenti chiediamo conferma uscita
+  showExitConfirm();
+});
+
+function showExitConfirm() {
+  const exitModal = document.getElementById('exitModal');
+  exitModal.classList.add('active');
+  // Re-pusha lo stato per non chiudere subito l'app
+  history.pushState({ tankobon: 'main' }, '');
+}
+
+document.getElementById('exitModalCancel').addEventListener('click', () => {
+  document.getElementById('exitModal').classList.remove('active');
+});
+document.getElementById('exitModalConfirm').addEventListener('click', () => {
+  // Chiude la finestra (funziona solo per PWA installate o in alcuni browser)
+  // In un browser normale, semplicemente lascia che il prossimo back porti fuori dalla cronologia
+  document.getElementById('exitModal').classList.remove('active');
+  // Rimuove tutti gli state pushed e fa back finchè esce
+  history.go(-(history.length));
+  window.close();
+});
+
 /* ---------- Init ---------- */
 loadTheme();
 loadCustomTags();
@@ -4654,6 +4723,10 @@ document.querySelectorAll('.tab').forEach(t => {
     db = await openDB();
     await reloadAndRender();
     setTab(currentTab);
+    // Stato iniziale per la gestione del tasto indietro
+    if (!history.state || !history.state.tankobon) {
+      history.replaceState({ tankobon: 'main' }, '');
+    }
     // Deep link ha priorità sull'onboarding: se c'è ?add=, mostra subito il modale
     const hasDeepLink = !!new URLSearchParams(window.location.search).get('add');
     if (hasDeepLink) {
