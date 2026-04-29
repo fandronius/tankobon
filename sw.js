@@ -1,5 +1,5 @@
-// Service Worker v1.9.2
-const CACHE = 'manga-tracker-v8';
+// Service Worker v1.10.0
+const CACHE = 'manga-tracker-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -9,9 +9,8 @@ const ASSETS = [
 ];
 
 const BYPASS_HOSTS = [
-  'graphql.anilist.co',
-  'workers.dev',
-  'openlibrary.org',
+  'api.jikan.moe',
+  'cdn.myanimelist.net',
   'googleapis.com',
   'fonts.googleapis.com',
   'fonts.gstatic.com',

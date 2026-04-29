@@ -1314,7 +1314,28 @@
 
   input[type="file"] { display: none; }
 
-    /* ====== PULL TO REFRESH ====== */
+    /* ====== PLOT SECTION ====== */
+  .plot-section {
+    padding: 20px;
+    margin-top: 12px;
+  }
+  .plot-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    white-space: pre-line;
+    background: var(--surface);
+    padding: 16px 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+  }
+  .plot-text.empty {
+    color: var(--muted);
+    font-style: italic;
+    text-align: center;
+  }
+
+  /* ====== PULL TO REFRESH ====== */
   .ptr-indicator {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -1762,6 +1783,11 @@
     </div>
     <div class="volumes-grid" id="volumesGrid"></div>
   </section>
+
+  <section class="plot-section" id="plotSection">
+    <div class="section-label"><span>Trama</span></div>
+    <div class="plot-text" id="plotText"></div>
+  </section>
 </div>
 
 <!-- ================== MODALE SERIE ================== -->
@@ -1778,7 +1804,7 @@
     <button type="button" id="searchCoverBtn" class="anilist-search-btn">
       <span class="anilist-search-icon">🔍</span>
       <span class="anilist-search-text">
-        Cerca su AniList
+        Cerca online
         <span class="anilist-search-sub">Compila automaticamente nome, autore, copertina e tag</span>
       </span>
     </button>
@@ -1799,6 +1825,8 @@
       </div>
     </div>
 
+    <label class="tag-editor-label" for="seriesPlotInput">Trama (opzionale)</label>
+    <textarea id="seriesPlotInput" placeholder="Breve descrizione della serie…" rows="4" style="width:100%;padding:11px 14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-family:inherit;font-size:14px;outline:none;border-radius:var(--radius-md);resize:vertical;min-height:80px;line-height:1.5;-webkit-appearance:none;margin-bottom:14px;"></textarea>
     <label class="tag-editor-label">Tag / Generi</label>
     <div class="tag-editor" id="tagEditor"></div>
     <div class="tag-add-custom-row">
@@ -1835,7 +1863,7 @@
 <!-- ================== MODALE RICERCA ONLINE ================== -->
 <div class="modal-backdrop" id="searchModal">
   <div class="modal">
-    <h3>Cerca su AniList</h3>
+    <h3>Cerca online</h3>
     <div class="modal-sub">Compila automaticamente nome, autore, copertina e tag</div>
 
     <div class="form-row">
@@ -1916,7 +1944,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.9.4 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.10.0 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -1938,7 +1966,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.9.4</div>
+      <div class="version-number">v1.10.0</div>
       <div class="version-author">di <span>Fandronius</span></div>
       <div style="margin-top:10px">
         <a id="readmeLink"
@@ -2008,7 +2036,7 @@
         <div class="onboarding-title">Aggiungi con la fotocamera</div>
         <div class="onboarding-body">
           Tocca <strong>+</strong> e poi <strong>Scansiona ISBN</strong> per inquadrare il codice a barre di un manga.<br><br>
-          L'app cerca automaticamente su AniList: copertina, autore e generi già compilati.
+          L'app cerca automaticamente online: copertina, autore e generi già compilati.
         </div>
       </div>
 
@@ -2050,7 +2078,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.9.4';
+const APP_VERSION = '1.10.0';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2099,6 +2127,7 @@ let currentSeriesId = null;
 let editingSeriesId = null;
 let pendingCover = null;
 let pendingTags = [];        // tag in fase di editing
+let pendingPlot = '';        // plot/sinossi della serie
 let currentSort = 'name';
 let currentTab = 'collection';
 let currentQuery = '';
@@ -2577,6 +2606,20 @@ function renderDetail() {
   });
   const addBtn = document.getElementById('addVolBtn');
   if (addBtn) addBtn.addEventListener('click', addNextVolume);
+
+  // Render plot
+  const plotSection = document.getElementById('plotSection');
+  const plotText = document.getElementById('plotText');
+  if (plotSection && plotText) {
+    if (s.plot && s.plot.trim()) {
+      plotText.textContent = s.plot;
+      plotText.classList.remove('empty');
+    } else {
+      plotText.textContent = 'Nessuna trama. Modifica la serie per aggiungerla, oppure usa "Cerca online" per scaricarla automaticamente.';
+      plotText.classList.add('empty');
+    }
+    plotSection.style.display = '';
+  }
 }
 
 async function toggleVolume(n) {
@@ -2671,6 +2714,9 @@ function openAddModal() {
   editingSeriesId = null;
   pendingCover = null;
   pendingTags = [];
+  pendingPlot = '';
+  const plotInput = document.getElementById('seriesPlotInput');
+  if (plotInput) plotInput.value = '';
   document.getElementById('modalTitle').textContent = newKind === 'wishlist' ? 'Nuova in Wishlist' : 'Nuova Serie';
   document.getElementById('modalSub').textContent = newKind === 'wishlist' ? 'Serie che vuoi iniziare' : 'Aggiungi un manga alla collezione';
   document.getElementById('seriesNameInput').value = '';
@@ -2695,6 +2741,9 @@ function openEditModal() {
   if (!s) return;
   editingSeriesId = s.id;
   pendingCover = s.cover || null;
+  pendingPlot = s.plot || '';
+  const plotInputEdit = document.getElementById('seriesPlotInput');
+  if (plotInputEdit) plotInputEdit.value = pendingPlot;
   pendingTags = [...(s.tags || [])];
   const isWish = s.kind === 'wishlist';
   document.getElementById('modalTitle').textContent = 'Modifica';
@@ -2718,6 +2767,8 @@ function closeModal() {
 
 async function saveFromModal() {
   const name = document.getElementById('seriesNameInput').value.trim();
+  const plotEl = document.getElementById('seriesPlotInput');
+  if (plotEl) pendingPlot = plotEl.value.trim();
   const author = document.getElementById('seriesAuthorInput').value.trim();
   if (!name) { toast('Inserisci un nome'); return; }
 
@@ -2743,6 +2794,7 @@ async function saveFromModal() {
         name, author,
         cover: pendingCover || null,
         tags: [...pendingTags],
+        plot: pendingPlot || '',
         createdAt: Date.now(),
         ongoing: false,
         volumes: []
@@ -2764,6 +2816,7 @@ async function saveFromModal() {
     s.author = author;
     s.cover = pendingCover || null;
     s.tags = [...pendingTags];
+    s.plot = pendingPlot || '';
     s.ongoing = ongoing;
 
     if (!ongoing) {
@@ -2787,6 +2840,7 @@ async function saveFromModal() {
       name, author,
       cover: pendingCover || null,
       tags: [...pendingTags],
+      plot: pendingPlot || '',
       createdAt: Date.now(),
       ongoing,
       volumes: []
@@ -2919,74 +2973,22 @@ function handleCoverUpload(file) {
   reader.readAsDataURL(file);
 }
 
-/* ---------- AniList (ricerca serie) ---------- */
-/*
- * AniList GraphQL fetch — strategia in cascata:
- *
- * 1. POST diretto con Content-Type: text/plain
- *    → text/plain è una "safelisted header" CORS, niente preflight OPTIONS
- *    → AniList accetta JSON anche con questo content-type
- *
- * 2. POST tramite proxy allorigins.win (passa attraverso il backend del proxy)
- *
- * 3. POST tramite proxy codetabs.com
- *
- * L'endpoint vincente viene memorizzato in localStorage.
- */
-
-const ANILIST_URL = 'https://graphql.anilist.co';
-const LS_PREFERRED_ENDPOINT = 'mangaTracker.preferredAnilistEndpoint';
-
-const ANILIST_ENDPOINTS = [
-  {
-    name: 'worker',
-    label: 'Cloudflare Worker',
-    fetch: async (body, signal) => {
-      // Worker proprio su Cloudflare: gestisce CORS perfettamente, no rate limit
-      const res = await fetch('https://anilist-proxy.fandroleto.workers.dev', {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        signal,
-        cache: 'no-store',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }
-  },
-  {
-    name: 'direct',
-    label: 'Diretto',
-    fetch: async (body, signal) => {
-      // Fallback: text/plain per evitare preflight CORS
-      const res = await fetch(ANILIST_URL, {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-        body: JSON.stringify(body),
-        signal,
-        cache: 'no-store',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }
-  },
-];
-
-async function _tryEndpoint(endpoint, body, timeoutMs = 12000) {
+/* ---------- Jikan / MyAnimeList API (CORS-friendly, no proxy needed) ---------- */
+async function jikanFetch(path) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), 12000);
   try {
-    const json = await endpoint.fetch(body, controller.signal);
+    const res = await fetch('https://api.jikan.moe/v4' + path, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: { 'Accept': 'application/json' },
+      signal: controller.signal,
+      cache: 'no-store',
+    });
     clearTimeout(timer);
-    if (json.errors && json.errors.length) {
-      throw new Error(json.errors[0].message || 'GraphQL error');
-    }
-    if (!json.data) throw new Error('Risposta vuota');
-    return json;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
   } catch (err) {
     clearTimeout(timer);
     if (err.name === 'AbortError') throw new Error('Timeout');
@@ -2994,59 +2996,44 @@ async function _tryEndpoint(endpoint, body, timeoutMs = 12000) {
   }
 }
 
-async function anilistFetch(body) {
-  let preferredName = localStorage.getItem(LS_PREFERRED_ENDPOINT);
-  // Se la preferenza memorizzata non esiste più tra gli endpoint correnti, pulisci
-  if (preferredName && !ANILIST_ENDPOINTS.find(e => e.name === preferredName)) {
-    localStorage.removeItem(LS_PREFERRED_ENDPOINT);
-    preferredName = null;
-  }
-  const order = [];
-  if (preferredName) {
-    const idx = ANILIST_ENDPOINTS.findIndex(e => e.name === preferredName);
-    if (idx >= 0) order.push(idx);
-  }
-  for (let i = 0; i < ANILIST_ENDPOINTS.length; i++) {
-    if (!order.includes(i)) order.push(i);
-  }
-
-  let lastErr = null;
-  for (const idx of order) {
-    const ep = ANILIST_ENDPOINTS[idx];
-    try {
-      const result = await _tryEndpoint(ep, body);
-      if (ep.name !== preferredName) {
-        localStorage.setItem(LS_PREFERRED_ENDPOINT, ep.name);
-        console.log('[AniList] Endpoint funzionante:', ep.label);
-      }
-      return result;
-    } catch (err) {
-      lastErr = err;
-      console.warn('[AniList]', ep.label, 'fallito:', err.message);
-    }
-  }
-  localStorage.removeItem(LS_PREFERRED_ENDPOINT);
-  throw lastErr || new Error('Nessun endpoint AniList raggiungibile');
+/* Piccolo rate limiter per rispettare il limite Jikan (3 req/sec) */
+let _lastJikanCall = 0;
+async function jikanThrottle() {
+  const elapsed = Date.now() - _lastJikanCall;
+  if (elapsed < 350) await new Promise(r => setTimeout(r, 350 - elapsed));
+  _lastJikanCall = Date.now();
 }
 
 async function searchAniList(query) {
-  const gql = `
-    query ($search: String) {
-      Page(page: 1, perPage: 10) {
-        media(type: MANGA, search: $search, sort: SEARCH_MATCH) {
-          id
-          title { romaji english native }
-          coverImage { large medium }
-          volumes
-          genres
-          staff(perPage: 3) {
-            edges { role node { name { full } } }
-          }
-        }
-      }
-    }`;
-  const data = await anilistFetch({ query: gql, variables: { search: query } });
-  return (data.data && data.data.Page && data.data.Page.media) || [];
+  // Manteniamo il nome searchAniList per compatibilità ma usiamo Jikan
+  await jikanThrottle();
+  const data = await jikanFetch('/manga?q=' + encodeURIComponent(query) + '&limit=10&order_by=popularity&sort=asc');
+  const list = data.data || [];
+  // Adatta il formato Jikan al formato già usato dal codice (compatibile con AniList shape)
+  return list.map(m => ({
+    id: m.mal_id,
+    title: {
+      english: m.title_english || '',
+      romaji: m.title || '',
+      native: m.title_japanese || '',
+    },
+    coverImage: {
+      large: (m.images && m.images.jpg && (m.images.jpg.large_image_url || m.images.jpg.image_url)) || '',
+      medium: (m.images && m.images.jpg && m.images.jpg.image_url) || '',
+    },
+    volumes: m.volumes || null,
+    genres: (m.genres || []).map(g => g.name).concat((m.themes || []).map(g => g.name)),
+    staff: {
+      edges: (m.authors || []).map(a => ({
+        role: 'Story & Art',
+        node: { name: { full: a.name.replace(/,\s*/, ' ') } }
+      }))
+    },
+    synopsis: m.synopsis || '',
+    score: m.score || null,
+    status: m.status || '',
+    type: m.type || 'Manga',
+  }));
 }
 
 let _searchOpenedFromSeriesModal = false;
@@ -3184,6 +3171,11 @@ async function pickSearchResult(item) {
   if (authorName && !document.getElementById('seriesAuthorInput').value.trim()) {
     document.getElementById('seriesAuthorInput').value = authorName;
   }
+  if (item.synopsis) {
+    pendingPlot = item.synopsis;
+    const plotEl = document.getElementById('seriesPlotInput');
+    if (plotEl) plotEl.value = item.synopsis;
+  }
   if (!document.getElementById('ongoingCheckbox').checked &&
       item.volumes && !document.getElementById('seriesTotalInput').value) {
     document.getElementById('seriesTotalInput').value = item.volumes;
@@ -3226,90 +3218,82 @@ async function pickSearchResult(item) {
 const REC_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 async function fetchTrendingManga() {
-  const gql = `
-    query {
-      Page(page: 1, perPage: 15) {
-        media(type: MANGA, sort: TRENDING_DESC, isAdult: false) {
-          id
-          title { romaji english native }
-          coverImage { large medium }
-          averageScore
-          genres
-        }
-      }
-    }`;
-  const data = await anilistFetch({ query: gql });
-  return (data.data && data.data.Page && data.data.Page.media) || [];
+  await jikanThrottle();
+  const data = await jikanFetch('/top/manga?type=manga&limit=15');
+  const list = data.data || [];
+  return list.map(m => ({
+    id: m.mal_id,
+    title: {
+      english: m.title_english || '',
+      romaji: m.title || '',
+      native: m.title_japanese || '',
+    },
+    coverImage: {
+      large: (m.images && m.images.jpg && (m.images.jpg.large_image_url || m.images.jpg.image_url)) || '',
+      medium: (m.images && m.images.jpg && m.images.jpg.image_url) || '',
+    },
+    volumes: m.volumes || null,
+    genres: (m.genres || []).map(g => g.name),
+    synopsis: m.synopsis || '',
+    averageScore: m.score ? Math.round(m.score * 10) : null,
+  }));
 }
 
-/* Raccomandazioni personalizzate:
-   Per ogni serie in collezione, cerca il manga su AniList per ID o titolo,
-   poi prendi le sue recommendations, aggrega per frequenza. */
+/* Raccomandazioni personalizzate via Jikan: cerca il manga, poi /recommendations */
 async function fetchPersonalRecommendations(seedTitles) {
   if (!seedTitles || seedTitles.length === 0) return [];
-  // Limite: max 5 seed per evitare rate-limit
-  const seeds = seedTitles.slice(0, 5);
-  const gql = `
-    query ($search: String) {
-      Media(type: MANGA, search: $search, sort: SEARCH_MATCH) {
-        id
-        title { romaji english native }
-        recommendations(perPage: 10, sort: RATING_DESC) {
-          edges {
-            node {
-              mediaRecommendation {
-                id
-                title { romaji english native }
-                coverImage { large medium }
-                averageScore
-                genres
-                type
-              }
-            }
-          }
-        }
-      }
-    }`;
-  const recsMap = new Map(); // id → {media, count}
-  // Costruisci set di titoli da escludere: tutte le serie (collezione + wishlist)
+  const seeds = seedTitles.slice(0, 3); // limita per rate-limit Jikan
+  const recsMap = new Map();
   const allOwnedTitles = new Set(
-    seriesCache.flatMap(s => [s.name, s.name.toLowerCase()])
+    seriesCache.flatMap(s => [s.name.toLowerCase()])
   );
   const seenOwnTitles = new Set([
     ...seedTitles.map(t => t.toLowerCase()),
-    ...Array.from(allOwnedTitles).map(t => t.toLowerCase())
+    ...Array.from(allOwnedTitles)
   ]);
 
   for (const title of seeds) {
     try {
-      let data;
-      try { data = await anilistFetch({ query: gql, variables: { search: title } }); }
-      catch { continue; }
-      const recs = data.data && data.data.Media && data.data.Media.recommendations && data.data.Media.recommendations.edges;
-      if (!Array.isArray(recs)) continue;
-      for (const edge of recs) {
-        const mr = edge.node && edge.node.mediaRecommendation;
-        if (!mr || mr.type !== 'MANGA') continue;
-        // Escludi quelli già in collezione
-        const recTitles = [mr.title.english, mr.title.romaji, mr.title.native].filter(Boolean).map(t => t.toLowerCase());
-        if (recTitles.some(t => seenOwnTitles.has(t))) continue;
-        const current = recsMap.get(mr.id);
-        if (current) current.count += 1;
-        else recsMap.set(mr.id, { media: mr, count: 1 });
+      await jikanThrottle();
+      const search = await jikanFetch('/manga?q=' + encodeURIComponent(title) + '&limit=1');
+      const seedManga = search.data && search.data[0];
+      if (!seedManga) continue;
+
+      await jikanThrottle();
+      const recs = await jikanFetch('/manga/' + seedManga.mal_id + '/recommendations');
+      const recList = (recs.data || []).slice(0, 8);
+      for (const rec of recList) {
+        const m = rec.entry;
+        if (!m) continue;
+        const recTitle = (m.title || '').toLowerCase();
+        if (seenOwnTitles.has(recTitle)) continue;
+        const id = m.mal_id;
+        if (recsMap.has(id)) {
+          recsMap.get(id).count += 1;
+        } else {
+          recsMap.set(id, {
+            count: 1,
+            media: {
+              id: m.mal_id,
+              title: { english: '', romaji: m.title || '', native: '' },
+              coverImage: {
+                large: (m.images && m.images.jpg && m.images.jpg.large_image_url) || '',
+                medium: (m.images && m.images.jpg && m.images.jpg.image_url) || '',
+              },
+              genres: [],
+              synopsis: '',
+              averageScore: null,
+            }
+          });
+        }
       }
-      // Piccolo delay per rispettare rate-limit
-      await new Promise(r => setTimeout(r, 250));
     } catch (err) {
-      console.error('rec fetch error:', err);
+      console.warn('rec fetch error for', title, err.message);
     }
   }
 
-  // Ordina: conteggio discendente, poi score
   return Array.from(recsMap.values())
-    .sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return (b.media.averageScore || 0) - (a.media.averageScore || 0);
-    })
+    .sort((a, b) => b.count - a.count)
     .slice(0, 12)
     .map(x => x.media);
 }

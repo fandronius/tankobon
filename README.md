@@ -36,6 +36,12 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 - Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
 - Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
 
+### v1.10.0 — Riscrittura: addio AniList, benvenuta Jikan
+- **Nuova API**: tutte le funzioni di ricerca/raccomandazioni passate da AniList a **Jikan (MyAnimeList wrapper)** — gratuita, senza chiave, con CORS abilitato di default. Niente più proxy, niente più Worker, niente più 403.
+- **Plot/sinossi**: ogni serie ora salva la trama. Quando cerchi online viene scaricata automaticamente; in alternativa puoi scriverla a mano nel form modifica
+- **Sezione Trama nel dettaglio**: visibile sotto i volumi sia in collezione che in wishlist
+- Rimosso tutto il codice del proxy CORS, Cloudflare Worker, fallback proxy
+
 ### v1.9.3
 - Fix URL Cloudflare Worker: aggiornato a `tankobon-proxy.fandroleto.workers.dev`
 - Worker ora su repo separato `tankobon-worker` per compatibilità con Cloudflare Pages CI
