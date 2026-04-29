@@ -3031,7 +3031,7 @@ async function shareCurrentSeries() {
   if (s.author) params.set('author', s.author);
   const deepLink = `https://fandronius.github.io/tankobon/?${params.toString()}`;
 
-  const text = `Ciao, guarda questa serie, credo ti piacerà molto!\n\n📚 ${titleLine}\n\nApri questo link per aggiungerla direttamente alla tua wishlist su Tankōbon:\n${deepLink}`;
+  const text = `Ciao, hai mai letto questo manga? Credo ti piacerà molto!\n\n📚 ${titleLine}\n\nApri questo link per aggiungerla direttamente alla tua wishlist su Tankōbon:\n${deepLink}`;
 
   if (navigator.share) {
     try { await navigator.share({ title: s.name, text }); }
