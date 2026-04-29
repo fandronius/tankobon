@@ -2050,7 +2050,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.11.4 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.6 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -2080,7 +2080,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.11.4</div>
+      <div class="version-number">v1.11.6</div>
       <div class="version-author">
         di <a href="mailto:fandroleto@gmail.com?subject=Tankōbon%20-%20Suggerimenti" style="color:var(--accent);text-decoration:none;font-weight:600">Fandronius</a>
       </div>
@@ -2194,7 +2194,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.11.4';
+const APP_VERSION = '1.11.6';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -2686,10 +2686,27 @@ function renderDetail() {
 
   if (isWishlist) {
     statsEl.style.display = 'none';
-    volSection.style.display = 'none';
     progressWrap.classList.remove('visible');
+    // Mostra info volumi totali se disponibile
+    if (s.totalVolumes && s.totalVolumes > 0) {
+      volSection.style.display = 'block';
+      const grid = document.getElementById('volumesGrid');
+      const label = document.querySelector('#volumesSection .section-label span');
+      const progText = document.getElementById('volProgressText');
+      if (label) label.textContent = 'Volumi pubblicati';
+      if (progText) progText.textContent = `${s.totalVolumes} volumi`;
+      grid.innerHTML = `<div style="grid-column:1/-1;padding:14px 18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);font-size:13px;color:var(--ink-soft);text-align:center">
+        Questa serie ha <strong style="color:var(--ink)">${s.totalVolumes} volumi</strong> totali.<br>
+        Spostala in collezione per tracciare quelli posseduti.
+      </div>`;
+    } else {
+      volSection.style.display = 'none';
+    }
     return;
   }
+  // Quando torno alla collezione, ripristina la label
+  const label = document.querySelector('#volumesSection .section-label span');
+  if (label) label.textContent = 'Volumi';
 
   statsEl.style.display = 'grid';
   volSection.style.display = 'block';
@@ -3494,7 +3511,9 @@ async function fetchTrendingManga() {
 /* Raccomandazioni personalizzate via Jikan: cerca il manga, poi /recommendations */
 async function fetchPersonalRecommendations(seedTitles) {
   if (!seedTitles || seedTitles.length === 0) return [];
-  const seeds = seedTitles.slice(0, 3); // limita per rate-limit Jikan
+  // Mescola i titoli e prendi 3 random come seed (varietà ad ogni refresh)
+  const shuffled = [...seedTitles].sort(() => Math.random() - 0.5);
+  const seeds = shuffled.slice(0, 3);
   const recsMap = new Map();
   const allOwnedTitles = new Set(
     seriesCache.flatMap(s => [s.name.toLowerCase()])
@@ -3513,7 +3532,9 @@ async function fetchPersonalRecommendations(seedTitles) {
 
       await jikanThrottle();
       const recs = await jikanFetch('/manga/' + seedManga.mal_id + '/recommendations');
-      const recList = (recs.data || []).slice(0, 8);
+      // Mescola le raccomandazioni e prendi 12 (anche di nicchia, non solo le top)
+      const allRecs = (recs.data || []).sort(() => Math.random() - 0.5);
+      const recList = allRecs.slice(0, 12);
       for (const rec of recList) {
         const m = rec.entry;
         if (!m) continue;
@@ -3544,8 +3565,9 @@ async function fetchPersonalRecommendations(seedTitles) {
     }
   }
 
+  // Mescola i risultati finali invece di ordinarli per count: più varietà
   return Array.from(recsMap.values())
-    .sort((a, b) => b.count - a.count)
+    .sort(() => Math.random() - 0.5)
     .slice(0, 12)
     .map(x => x.media);
 }
@@ -3655,42 +3677,106 @@ function renderRecommendations(items, mode) {
   }).join('');
 
   scroller.querySelectorAll('.rec-card').forEach(card => {
-    card.addEventListener('click', () => addRecToWishlist(card.dataset.title, card.dataset.cover));
+    card.addEventListener('click', () => addRecToWishlist(
+      card.dataset.title,
+      card.dataset.cover,
+      card.dataset.anilistId
+    ));
   });
 }
 
-async function addRecToWishlist(title, coverUrl) {
+async function addRecToWishlist(title, coverUrl, malId) {
   if (!(await customConfirm(
     'Aggiungi alla wishlist',
     `Aggiungere "${title}" alla tua wishlist?`,
     'Aggiungi'
   ))) return;
 
-  // Verifica se esiste già
-  const exists = seriesCache.find(s => s.name.toLowerCase() === title.toLowerCase());
+  // Verifica se esiste già (case insensitive)
+  const titleLower = title.toLowerCase().trim();
+  const exists = seriesCache.find(s =>
+    s.name.toLowerCase().trim() === titleLower
+  );
   if (exists) {
-    toast('Serie già presente');
+    toast(exists.kind === 'wishlist' ? 'Già nella wishlist' : 'Già in collezione');
     return;
   }
 
+  toast('Importazione dati…');
+
+  // Arricchimento dati: prendi il manga completo da Jikan
+  let enriched = {
+    name: title,
+    author: '',
+    plot: '',
+    tags: [],
+    totalVolumes: null,
+    cover: coverUrl,
+  };
+
+  if (malId) {
+    try {
+      await jikanThrottle();
+      const data = await jikanFetch('/manga/' + malId + '/full');
+      const m = data.data;
+      if (m) {
+        enriched.name = m.title_english || m.title || title;
+        if (m.authors && m.authors[0]) {
+          enriched.author = m.authors[0].name.replace(/,\s*/, ' ');
+        }
+        enriched.plot = m.synopsis || '';
+        enriched.totalVolumes = m.volumes || null;
+        // Cover migliore di Jikan
+        if (m.images && m.images.jpg && m.images.jpg.large_image_url) {
+          enriched.cover = m.images.jpg.large_image_url;
+        }
+        // Genres + themes → tag
+        const genres = (m.genres || []).concat(m.themes || []);
+        for (const g of genres) {
+          const tagId = mapAniListGenreToTag(g.name);
+          if (tagId && !enriched.tags.includes(tagId)) {
+            enriched.tags.push(tagId);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Arricchimento rec fallito:', err.message);
+    }
+  }
+
+  // Scarica copertina come dataURL per offline
   let coverData = null;
-  if (coverUrl) {
-    try { coverData = await fetchImageAsDataURL(coverUrl); }
-    catch { coverData = coverUrl; }
+  if (enriched.cover) {
+    try { coverData = await fetchImageAsDataURL(enriched.cover); }
+    catch { coverData = enriched.cover; }
   }
 
   const newS = {
     id: uid(),
     kind: 'wishlist',
-    name: title,
-    author: '',
+    name: enriched.name,
+    author: enriched.author,
     cover: coverData,
-    tags: [],
+    tags: enriched.tags,
+    plot: enriched.plot,
+    totalVolumes: enriched.totalVolumes,
     createdAt: Date.now(),
     ongoing: false,
     volumes: []
   };
   await saveSeries(newS);
+
+  // Traduci plot in background
+  if (enriched.plot) {
+    translateToItalian(enriched.plot).then(async (translated) => {
+      if (translated && translated !== enriched.plot) {
+        newS.plot = translated;
+        await saveSeries(newS);
+        if (currentSeriesId === newS.id) renderDetail();
+      }
+    }).catch(() => {});
+  }
+
   await reloadAndRender();
   toast('Aggiunta alla wishlist ★');
 }
