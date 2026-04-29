@@ -27,15 +27,6 @@ Apri il link dal tuo telefono e tocca **"Aggiungi alla schermata Home"** dal men
 
 ## Changelog
 
-### v1.8.2
-- Pull-to-refresh: scorri verso il basso nella lista per aggiornare
-- Fix: la card nella lista si aggiorna in tempo reale quando modifichi i volumi nel dettaglio (senza dover chiudere e riaprire)
-
-### v1.8.1
-- Fix bug: percentuale sempre 0% nella schermata principale anche con tutti i volumi posseduti
-- Fix: computeStats ora calcola la percentuale reale anche per serie ongoing
-- Fix: spostare da wishlist a collezione non imposta più ongoing:true automaticamente
-
 ### v1.10.0 — Riscrittura: addio AniList, benvenuta Jikan
 - **Nuova API**: tutte le funzioni di ricerca/raccomandazioni passate da AniList a **Jikan (MyAnimeList wrapper)** — gratuita, senza chiave, con CORS abilitato di default. Niente più proxy, niente più Worker, niente più 403.
 - **Plot/sinossi**: ogni serie ora salva la trama. Quando cerchi online viene scaricata automaticamente; in alternativa puoi scriverla a mano nel form modifica
