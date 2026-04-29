@@ -1938,6 +1938,13 @@
     <h3>Cosa aggiungere?</h3>
     <div class="modal-sub">Scegli il tipo di voce</div>
     <div style="display:flex;flex-direction:column;gap:0;margin-bottom:16px">
+      <button class="scan-isbn-btn" id="scanIsbnBtn">
+        <span class="scan-icon">▦</span>
+        <span class="scan-text">
+          Scansiona ISBN
+          <span class="scan-sub">Inquadra il codice a barre del manga</span>
+        </span>
+      </button>
       <button class="text-btn" id="addToCollection" style="padding:14px;font-size:14px;justify-content:flex-start">
         📚 &nbsp;Alla collezione
       </button>
@@ -2010,7 +2017,7 @@
     <h4>Condividi</h4>
     <button class="menu-item" id="checkUpdateBtn">
       <span>↻ &nbsp;Verifica aggiornamenti</span>
-      <span class="menu-item-hint" id="checkUpdateHint">v1.11.2 installata</span>
+      <span class="menu-item-hint" id="checkUpdateHint">v1.11.1 installata</span>
     </button>
     <button class="menu-item" id="shareAppBtn">
       <span>↗ &nbsp;Condividi l'app</span>
@@ -2040,7 +2047,7 @@
     <button class="menu-item" id="closeMenuBtn" style="color: var(--muted); justify-content:center">Chiudi</button>
 
     <div class="version-block">
-      <div class="version-number">v1.11.2</div>
+      <div class="version-number">v1.11.1</div>
       <div class="version-author">
         di <a href="mailto:fandroleto@gmail.com?subject=Tankōbon%20-%20Suggerimenti" style="color:var(--accent);text-decoration:none;font-weight:600">Fandronius</a>
       </div>
@@ -2059,6 +2066,26 @@
 
 <input type="file" id="importFile" accept="application/json,.json" />
 <input type="file" id="coverUploadFile" accept="image/*" />
+
+<!-- ================== SCANNER ISBN ================== -->
+<div class="scanner-backdrop" id="scannerBackdrop">
+  <div class="scanner-video-wrap">
+    <video id="scannerVideo" autoplay playsinline muted></video>
+    <div class="scanner-overlay"></div>
+    <div class="scanner-frame">
+      <div class="scanner-line"></div>
+      <div class="scanner-corners"></div>
+    </div>
+  </div>
+  <div class="scanner-footer">
+    <div class="scanner-status" id="scannerStatus">Inquadra il codice a barre ISBN</div>
+    <div class="scanner-isbn-manual">
+      <input type="number" id="isbnManualInput" placeholder="Inserisci ISBN a mano…" inputmode="numeric" />
+      <button id="isbnManualGo">OK</button>
+    </div>
+    <button class="scanner-close-btn" id="scannerCloseBtn">Annulla</button>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -2087,7 +2114,16 @@
         </div>
       </div>
 
-<div class="onboarding-slide">
+      <div class="onboarding-slide">
+        <span class="onboarding-emoji">▦</span>
+        <div class="onboarding-title">Aggiungi con la fotocamera</div>
+        <div class="onboarding-body">
+          Tocca <strong>+</strong> e poi <strong>Scansiona ISBN</strong> per inquadrare il codice a barre di un manga.<br><br>
+          L'app cerca automaticamente online: copertina, autore e generi già compilati.
+        </div>
+      </div>
+
+      <div class="onboarding-slide">
         <span class="onboarding-emoji">⭐</span>
         <div class="onboarding-title">Consigliati per te</div>
         <div class="onboarding-body">
@@ -2125,7 +2161,7 @@
    - Scansione ISBN via fotocamera (BarcodeDetector + ZXing fallback)
    ========================================================================= */
 
-const APP_VERSION = '1.11.2';
+const APP_VERSION = '1.11.1';
 const DB_NAME = 'MangaTrackerDB';
 const DB_VERSION = 1;
 const STORE = 'series';
@@ -3877,7 +3913,7 @@ document.getElementById('addSeriesBtn').addEventListener('click', () => {
 });
 
 // Scanner ISBN
-// Scansione ISBN rimossa
+document.getElementById('scanIsbnBtn').addEventListener('click', openScanner);
 document.getElementById('scannerCloseBtn').addEventListener('click', () => {
   closeScanner();
 });
@@ -4127,7 +4163,7 @@ document.getElementById('importFile').addEventListener('change', (e) => {
    ONBOARDING — appare solo al primo avvio
    ========================================================================= */
 const LS_ONBOARDING = 'mangaTracker.onboardingDone';
-const ONBOARDING_SLIDES = 4;
+const ONBOARDING_SLIDES = 5;
 let onboardingCurrent = 0;
 
 function renderOnboardingDots() {
