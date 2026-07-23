@@ -3645,6 +3645,48 @@ async function translateToItalian(text) {
   return translated.join('').trim();
 }
 
+/* ---------- Kitsu (fallback CORS-friendly quando Jikan non risponde) ---------- */
+async function searchKitsu(query) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(
+      'https://kitsu.io/api/edge/manga?filter[text]=' + encodeURIComponent(query) + '&page[limit]=15',
+      { method: 'GET', headers: { 'Accept': 'application/vnd.api+json' }, signal: controller.signal }
+    );
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('Kitsu HTTP ' + res.status);
+    const data = await res.json();
+    return (data.data || []).map(item => {
+      const a = item.attributes || {};
+      const titles = a.titles || {};
+      return {
+        id: 'kitsu_' + item.id,
+        title: {
+          english: titles.en || a.canonicalTitle || '',
+          romaji: titles.en_jp || a.canonicalTitle || '',
+          native: titles.ja_jp || '',
+        },
+        coverImage: {
+          large: (a.posterImage && (a.posterImage.large || a.posterImage.original)) || '',
+          medium: (a.posterImage && (a.posterImage.medium || a.posterImage.small)) || '',
+        },
+        volumes: a.volumeCount || null,
+        genres: [],
+        staff: { edges: [] }, // Kitsu non espone l'autore su questo endpoint base
+        synopsis: a.synopsis || '',
+        score: a.averageRating ? Math.round(a.averageRating) / 10 : null,
+        status: a.status || '',
+        type: 'Manga',
+        _fallbackSource: 'kitsu',
+      };
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
 async function searchAniList(query, mode = 'title') {
   // Manteniamo il nome searchAniList per compatibilità ma usiamo Jikan
   // mode: 'title' (default) o 'author'
@@ -3698,9 +3740,21 @@ async function searchAniList(query, mode = 'title') {
     return _adaptJikanList(list);
   }
   // Default: ricerca per titolo, niente sort esplicito (Jikan usa relevance per default)
-  const data = await jikanFetch('/manga?q=' + encodeURIComponent(query) + '&limit=15');
-  const list = data.data || [];
-  return _adaptJikanList(list);
+  try {
+    const data = await jikanFetch('/manga?q=' + encodeURIComponent(query) + '&limit=15');
+    const list = data.data || [];
+    return _adaptJikanList(list);
+  } catch (err) {
+    // MyAnimeList/Jikan non risponde: prova Kitsu come fonte alternativa (CORS-friendly, no key)
+    console.warn('Jikan non disponibile, provo Kitsu come fallback:', err.message);
+    try {
+      const kitsuResults = await searchKitsu(query);
+      if (kitsuResults.length > 0) return kitsuResults;
+    } catch (kitsuErr) {
+      console.warn('Anche Kitsu non disponibile:', kitsuErr.message);
+    }
+    throw err; // rilancia l'errore originale di Jikan se anche Kitsu fallisce
+  }
 }
 
 function _adaptJikanList(list) {
@@ -3812,6 +3866,9 @@ async function runSearch(query) {
         </div>`;
     }).join('');
     status.textContent = `${items.length} risultati — tocca per selezionare`;
+    if (items[0] && items[0]._fallbackSource === 'kitsu') {
+      status.textContent = `MyAnimeList non risponde — ${items.length} risultati da fonte alternativa (Kitsu, senza autore/generi)`;
+    }
     results.style.display = 'block';
     results.querySelectorAll('.search-result').forEach(el => {
       el.addEventListener('click', () => pickSearchResult(lastSearchItems[parseInt(el.dataset.idx, 10)]));
