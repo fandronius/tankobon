@@ -2582,6 +2582,8 @@ const LS_TAB = 'mangaTracker.tab';
 const LS_TAG_FILTER = 'mangaTracker.tagFilter';
 const LS_CUSTOM_TAGS = 'mangaTracker.customTags';
 const LS_REC_CACHE = 'mangaTracker.recCache';
+const LS_SEARCH_CACHE = 'mangaTracker.searchCache';
+const SEARCH_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minuti
 const LS_VIEW = 'mangaTracker.viewMode';
 
 /* Tag preimpostati con colori coerenti */
@@ -3555,10 +3557,11 @@ async function jikanFetch(path, retries = 2) {
       // Se è un errore 5xx (server Jikan), riprova dopo un delay
       if (res.status >= 500 && res.status < 600) {
         if (attempt < retries) {
-          await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); // 1.5s, 3s
+          const jitter = Math.random() * 400;
+          await new Promise(r => setTimeout(r, 1500 * (attempt + 1) + jitter)); // ~1.5-1.9s, ~3-3.4s
           continue;
         }
-        throw new Error(`Jikan non risponde (${res.status}) — riprova tra qualche minuto`);
+        throw new Error(`MyAnimeList non risponde (${res.status})`);
       }
 
       // 429 = rate limit: aspetta più a lungo e riprova
@@ -3755,6 +3758,27 @@ function closeSearchModal() {
 
 let lastSearchItems = [];
 
+function getSearchCache(key) {
+  try {
+    const raw = localStorage.getItem(LS_SEARCH_CACHE);
+    const all = raw ? JSON.parse(raw) : {};
+    const entry = all[key];
+    if (entry && (Date.now() - entry.ts < SEARCH_CACHE_TTL_MS)) return entry.items;
+  } catch {}
+  return null;
+}
+function setSearchCache(key, items) {
+  try {
+    const raw = localStorage.getItem(LS_SEARCH_CACHE);
+    const all = raw ? JSON.parse(raw) : {};
+    all[key] = { ts: Date.now(), items };
+    // Tieni solo le 20 ricerche più recenti per non gonfiare localStorage
+    const keys = Object.keys(all).sort((a, b) => all[b].ts - all[a].ts);
+    keys.slice(20).forEach(k => delete all[k]);
+    localStorage.setItem(LS_SEARCH_CACHE, JSON.stringify(all));
+  } catch {}
+}
+
 async function runSearch(query) {
   const status = document.getElementById('searchStatus');
   const results = document.getElementById('searchResults');
@@ -3763,11 +3787,13 @@ async function runSearch(query) {
     results.style.display = 'none';
     return;
   }
+  const cacheKey = currentSearchMode + ':' + query.trim().toLowerCase();
   status.textContent = 'Ricerca in corso…';
   results.style.display = 'none';
   try {
     const items = await searchAniList(query, currentSearchMode);
     lastSearchItems = items;
+    setSearchCache(cacheKey, items);
     if (items.length === 0) { status.textContent = 'Nessun risultato'; return; }
     results.innerHTML = items.map((m, idx) => {
       const title = m.title.english || m.title.romaji || m.title.native || 'Senza titolo';
@@ -3791,13 +3817,42 @@ async function runSearch(query) {
       el.addEventListener('click', () => pickSearchResult(lastSearchItems[parseInt(el.dataset.idx, 10)]));
     });
   } catch (err) {
-    console.error('AniList search error:', err);
+    console.error('MyAnimeList (Jikan) search error:', err);
+
+    // Se il servizio non risponde, prova a recuperare un risultato recente dalla cache
+    const cached = getSearchCache(cacheKey);
+    if (cached && cached.length > 0) {
+      lastSearchItems = cached;
+      results.innerHTML = cached.map((m, idx) => {
+        const title = m.title.english || m.title.romaji || m.title.native || 'Senza titolo';
+        const authorEdge = (m.staff && m.staff.edges || []).find(e => /story|art/i.test(e.role || ''));
+        const authorName = authorEdge ? authorEdge.node.name.full
+          : (m.staff && m.staff.edges && m.staff.edges[0] ? m.staff.edges[0].node.name.full : '');
+        const vols = m.volumes ? `${m.volumes} vol.` : '';
+        const coverUrl = (m.coverImage && (m.coverImage.large || m.coverImage.medium)) || '';
+        return `
+          <div class="search-result" data-idx="${idx}">
+            <div class="search-result-cover" style="background-image:url('${coverUrl}')"></div>
+            <div class="search-result-info">
+              <div class="search-result-title">${escapeHtml(title)}</div>
+              <div class="search-result-meta">${escapeHtml(authorName)}${authorName && vols ? ' · ' : ''}${vols}</div>
+            </div>
+          </div>`;
+      }).join('');
+      results.style.display = 'block';
+      results.querySelectorAll('.search-result').forEach(el => {
+        el.addEventListener('click', () => pickSearchResult(lastSearchItems[parseInt(el.dataset.idx, 10)]));
+      });
+      status.textContent = `MyAnimeList non risponde — risultati salvati (${cached.length}) da una ricerca recente`;
+      return;
+    }
+
     if (err.message && err.message.includes('Timeout')) {
-      status.textContent = 'Timeout — riprova tra qualche secondo';
+      status.textContent = 'Timeout — MyAnimeList non risponde. Torna indietro e aggiungi la serie a mano (potrai cercare la copertina più tardi da "Modifica").';
     } else if (!navigator.onLine) {
       status.textContent = 'Nessuna connessione internet';
     } else {
-      status.textContent = 'Errore AniList (' + (err.message || 'sconosciuto') + ')';
+      status.textContent = 'MyAnimeList non risponde (' + (err.message || 'errore sconosciuto') + '). Torna indietro e aggiungi la serie a mano: potrai riprovare la ricerca più tardi da "Modifica".';
     }
   }
 }
@@ -4060,7 +4115,7 @@ async function loadRecommendations(forceRefresh = false) {
     }
     if (items.length === 0) {
       titleEl.textContent = 'Manga in trend';
-      subtitleEl.textContent = 'I più popolari su AniList';
+      subtitleEl.textContent = 'I più popolari su MyAnimeList';
       items = await fetchTrendingManga();
       mode = 'trending';
     }
@@ -4087,7 +4142,7 @@ function renderRecommendations(items, mode) {
     subtitleEl.textContent = 'In base alla tua collezione';
   } else {
     titleEl.textContent = 'Manga in trend';
-    subtitleEl.textContent = 'I più popolari su AniList';
+    subtitleEl.textContent = 'I più popolari su MyAnimeList';
   }
 
   if (!items || items.length === 0) {
